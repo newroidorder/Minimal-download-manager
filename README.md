@@ -1,4 +1,4 @@
-# Mini IDM
+# Minimal Download Manager
 
 A download manager for Windows modelled on Internet Download Manager: the same
 layout, menus, Options tabs, categories, queues and scheduler, with a 2026
@@ -7,7 +7,7 @@ Windows 11 look, dark mode, and English or Brazilian Portuguese.
 The **program** does all the work. The small **browser extension** is only a
 connector: it hands your downloads to the program and has nothing to set up.
 
-![Mini IDM main window](docs/screenshots/main-list.png)
+![Minimal Download Manager main window](docs/screenshots/main-list.png)
 
 | Download File Info | Progress | Download complete |
 |---|---|---|
@@ -19,19 +19,19 @@ connector: it hands your downloads to the program and has nothing to set up.
 
 ## Install
 
-1. Download **Mini-IDM-Setup-2.0.1.exe** from the [Releases page](../../releases) (or from the
+1. Download **Minimal-Download-Manager-Setup-2.1.0.exe** from the [Releases page](../../releases) (or from the
    latest successful **Windows build** run under Actions).
 2. Run it. The installer isn't code-signed, so Windows SmartScreen may show "Windows protected
    your PC": click **More info → Run anyway**.
-3. Mini IDM starts and from then on starts with Windows, sitting in the notification area
+3. Minimal Download Manager starts and from then on starts with Windows, sitting in the notification area
    (next to the clock). Closing the window keeps it running there, like IDM.
 
 ### Connect your browser (once)
 
-1. In Mini IDM open **Options → General**. Under *Browser extension* click **Open folder**.
+1. In Minimal Download Manager open **Options → General**. Under *Browser extension* click **Open folder**.
 2. In your browser open `opera://extensions` (or `chrome://extensions`, `edge://extensions`),
    turn on **Developer mode**, click **Load unpacked** and choose that folder.
-3. That's it. There's nothing to configure in the extension. The status bar in Mini IDM shows
+3. That's it. There's nothing to configure in the extension. The status bar in Minimal Download Manager shows
    "Connected: Opera" once the browser has talked to it.
 
 If you used the earlier "npm start" version: stop that server first (it used the same port), and
@@ -50,7 +50,7 @@ half of the largest remaining part), pause and resume (also after a restart), au
 direct writing (no temporary files to merge), duplicate-address handling, file names from the server.
 
 **Browser capture**: downloads the browser starts, clicks on file links, right-click "Download with
-Mini IDM", and videos/files spotted on the page (listed in the extension's popup). Your cookies
+Minimal Download Manager", and videos/files spotted on the page (listed in the extension's popup). Your cookies
 (including HttpOnly) go along so logged-in downloads work. Hold **Alt** while clicking to let the
 browser download instead.
 
@@ -111,13 +111,13 @@ npm run test:e2e     # real program + real extension (needs: npm i -D playwright
 npm run dist         # Windows installer in app/dist (on Linux this needs Wine)
 ```
 
-Pushing a tag like `v2.0.1` makes the **Windows build** workflow run the tests on Windows,
-build the installer, and attach it to a GitHub release.
+Every push to `main` makes the **Windows build** workflow run the tests on Windows, build the
+installer, and publish it as the release for the version in `app/package.json`.
 
 ### How the browser connection is secured
 
-The program listens on `127.0.0.1:7878` only. It accepts requests from the Mini IDM extension
+The program listens on `127.0.0.1:7878` only. It accepts requests from the Minimal Download Manager extension
 (recognised by its fixed ID, which browsers put in the `Origin` header and web pages cannot fake)
-or with the token in `%APPDATA%\Mini IDM\config.json`. There are no CORS headers, the `Host` header
+or with the token in `%APPDATA%\Minimal Download Manager\config.json`. There are no CORS headers, the `Host` header
 is checked (no DNS rebinding), only JSON is accepted, and forwarded request headers are limited
 to cookies, referrer, user agent and language. Cookies are kept in memory only.

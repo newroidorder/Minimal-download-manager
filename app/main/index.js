@@ -1,6 +1,6 @@
 'use strict';
 
-// Mini IDM: the Windows program. It owns the download engine, the windows,
+// Minimal Download Manager: the Windows program. It owns the download engine, the windows,
 // the tray icon, and the local bridge the browser extension talks to.
 
 const { app, protocol, net, Tray, Menu, nativeImage, nativeTheme, Notification, dialog, shell, session, powerSaveBlocker } = require('electron');
@@ -35,7 +35,7 @@ if (!app.requestSingleInstanceLock()) {
   app.on('second-instance', (_e, argv) => { handleArgs(argv); showMain(); });
   app.on('window-all-closed', () => { /* keep running in the tray */ });
   app.whenReady().then(start).catch((err) => {
-    dialog.showErrorBox('Mini IDM', `Mini IDM could not start:\n\n${err.stack || err}`);
+    dialog.showErrorBox('Minimal Download Manager', `Minimal Download Manager could not start:\n\n${err.stack || err}`);
     app.exit(1);
   });
 }
@@ -61,6 +61,7 @@ async function start() {
   });
 
   const home = app.getPath('userData');
+  if (!process.env.MINI_IDM_HOME) migrateOldData(home);
   const base = process.env.MINI_IDM_SAVE_DIR || app.getPath('downloads');
   const settings = new Settings(path.join(home, 'settings.json'), base);
   ctx.settings = settings;
@@ -101,6 +102,18 @@ async function start() {
   if (app.isPackaged) app.setAsDefaultProtocolClient('miniidm');
   handleArgs(process.argv);
   setInterval(keepAwake, 5000).unref?.();
+}
+
+// Until 2.1 the program was called "Mini IDM" and kept its data in
+// %APPDATA%\Mini IDM. Copy the list and settings over once.
+function migrateOldData(home) {
+  const old = path.join(app.getPath('appData'), 'Mini IDM');
+  const files = ['settings.json', 'downloads.json', 'config.json'];
+  if (!fs.existsSync(old) || files.some(f => fs.existsSync(path.join(home, f)))) return;
+  fs.mkdirSync(home, { recursive: true });
+  for (const f of files) {
+    try { fs.copyFileSync(path.join(old, f), path.join(home, f)); } catch { /* not there */ }
+  }
 }
 
 function listenBridge(port) {
@@ -199,7 +212,7 @@ async function afterQueue(action, name) {
   } else if (action === 'shutdown') {
     system.shutdown(t('notify.shutdownMessage', { name }));
     const r = await dialog.showMessageBox({
-      type: 'warning', title: 'Mini IDM', message: t('notify.shutdownTitle'), detail: t('notify.shutdownDetail', { name }),
+      type: 'warning', title: 'Minimal Download Manager', message: t('notify.shutdownTitle'), detail: t('notify.shutdownDetail', { name }),
       buttons: [t('notify.cancelShutdown'), t('common.ok')], defaultId: 0, cancelId: 0
     });
     if (r.response === 0) system.cancelShutdown();
@@ -294,7 +307,7 @@ function onMainClose(e) {
   windows.get('main').hide();
   if (!trayHintShown) {
     trayHintShown = true;
-    notify('Mini IDM', ctx.t('notify.inTray'));
+    notify('Minimal Download Manager', ctx.t('notify.inTray'));
   }
 }
 
@@ -325,7 +338,7 @@ function updateTrayTooltip() {
   const active = ctx.manager ? ctx.manager.list().filter(i => i.status === 'downloading') : [];
   const speed = active.reduce((n, i) => n + (i.speed || 0), 0);
   const fmt = speed > 1048576 ? `${(speed / 1048576).toFixed(1)} MB/s` : `${Math.round(speed / 1024)} KB/s`;
-  ctx.tray.setToolTip(active.length ? `Mini IDM: ${ctx.t('tray.active', { n: active.length })} · ${fmt}` : 'Mini IDM');
+  ctx.tray.setToolTip(active.length ? `Minimal Download Manager: ${ctx.t('tray.active', { n: active.length })} · ${fmt}` : 'Minimal Download Manager');
 }
 
 let cleaned = false;

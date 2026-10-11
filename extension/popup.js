@@ -1,17 +1,17 @@
-// Popup: is Mini IDM running, plus the videos and files found on this page.
+// Popup: is Minimal Download Manager running, plus the videos and files found on this page.
 import { ping, capture, fmtBytes, detectedKey } from './lib.js';
 
 const pt = chrome.i18n.getUILanguage().startsWith('pt');
 const T = pt ? {
-  open: 'Abrir o Mini IDM', running: 'Conectado ao Mini IDM {v}', notRunning: 'O Mini IDM não está aberto. Os downloads ficam no navegador.',
+  open: 'Abrir o Minimal Download Manager', running: 'Conectado ao Minimal Download Manager {v}', notRunning: 'O Minimal Download Manager não está aberto. Os downloads ficam no navegador.',
   start: 'Iniciar', found: 'Encontrado nesta página', none: 'Nada encontrado ainda. Toque o vídeo ou comece o download e abra de novo.',
   download: 'Baixar', sent: 'Enviado', failed: 'Falhou', stream: 'HLS/DASH: ainda não suportado',
-  hint: 'Os tipos de arquivo capturados são escolhidos no Mini IDM: Opções > Tipos de arquivos. Segure Alt ao clicar para deixar o navegador baixar.'
+  hint: 'Os tipos de arquivo capturados são escolhidos no Minimal Download Manager: Opções > Tipos de arquivos. Segure Alt ao clicar para deixar o navegador baixar.'
 } : {
-  open: 'Open Mini IDM', running: 'Connected to Mini IDM {v}', notRunning: 'Mini IDM is not open. Downloads stay in the browser.',
+  open: 'Open Minimal Download Manager', running: 'Connected to Minimal Download Manager {v}', notRunning: 'Minimal Download Manager is not open. Downloads stay in the browser.',
   start: 'Start', found: 'Found on this page', none: 'Nothing found yet. Play the video or start the download, then reopen.',
   download: 'Download', sent: 'Sent', failed: 'Failed', stream: 'HLS/DASH: not supported yet',
-  hint: 'The file types to capture are chosen in Mini IDM: Options > File types. Hold Alt while clicking to let the browser download.'
+  hint: 'The file types to capture are chosen in Minimal Download Manager: Options > File types. Hold Alt while clicking to let the browser download.'
 };
 
 const $ = (id) => document.getElementById(id);

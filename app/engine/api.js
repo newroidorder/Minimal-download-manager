@@ -1,12 +1,12 @@
 'use strict';
 
-// Browser bridge: the small local HTTP API the Mini IDM extension talks to.
+// Browser bridge: the small local HTTP API the Minimal Download Manager extension talks to.
 // It plays the role of IDM's IDMMsgHost.exe. The program itself (windows,
 // list, settings) talks to the manager directly, not through here.
 //
 // Security model:
 // - binds to 127.0.0.1 only
-// - accepts requests from the Mini IDM extension, identified by its fixed ID
+// - accepts requests from the Minimal Download Manager extension, identified by its fixed ID
 //   (browsers set the Origin header; web pages cannot fake it), or with the
 //   bearer token from <home>/config.json (for scripts and tests)
 // - Host must be 127.0.0.1:PORT or localhost:PORT (blocks DNS rebinding)

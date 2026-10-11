@@ -1,9 +1,9 @@
 // The extension is only a connector, like IDM's: it hands downloads to the
-// Mini IDM program, which decides what to capture (Options > File types).
+// Minimal Download Manager program, which decides what to capture (Options > File types).
 // 1. Downloads the browser starts on its own (chrome.downloads.onCreated).
 // 2. Clicks on file links (content.js), before the browser requests the URL,
 //    so one-time links are not used up.
-// 3. Right-click "Download with Mini IDM".
+// 3. Right-click "Download with Minimal Download Manager".
 // 4. Media and files seen in page traffic (webRequest, observe only), listed
 //    in the popup and never downloaded automatically.
 
@@ -16,8 +16,8 @@ async function setup() {
   const config = await refreshConfig();
   await chrome.contextMenus.removeAll();
   if (config?.contextMenu !== false) {
-    chrome.contextMenus.create({ id: 'mini-idm-link', title: chrome.i18n.getUILanguage().startsWith('pt') ? 'Baixar com o Mini IDM' : 'Download with Mini IDM', contexts: ['link'] });
-    chrome.contextMenus.create({ id: 'mini-idm-media', title: chrome.i18n.getUILanguage().startsWith('pt') ? 'Baixar esta mídia com o Mini IDM' : 'Download this media with Mini IDM', contexts: ['video', 'audio'] });
+    chrome.contextMenus.create({ id: 'mini-idm-link', title: chrome.i18n.getUILanguage().startsWith('pt') ? 'Baixar com o Minimal Download Manager' : 'Download with Minimal Download Manager', contexts: ['link'] });
+    chrome.contextMenus.create({ id: 'mini-idm-media', title: chrome.i18n.getUILanguage().startsWith('pt') ? 'Baixar esta mídia com o Minimal Download Manager' : 'Download this media with Minimal Download Manager', contexts: ['video', 'audio'] });
   }
 }
 chrome.runtime.onInstalled.addListener(setup);
@@ -37,8 +37,8 @@ chrome.downloads.onCreated.addListener(async (item) => {
   const url = item.finalUrl || item.url;
   if (!/^https?:/i.test(url)) return; // blob:, data:, filesystem: only exist inside the browser
 
-  // Hand off first; cancel only after Mini IDM accepted it. A cancelled
-  // download can't be resumed, so if Mini IDM is closed the browser keeps it.
+  // Hand off first; cancel only after Minimal Download Manager accepted it. A cancelled
+  // download can't be resumed, so if Minimal Download Manager is closed the browser keeps it.
   let accepted = false;
   try {
     accepted = await capture({ url, filename: (item.filename || '').split(/[\\/]/).pop(), mime: item.mime, referrer: item.referrer, kind: 'auto' });
@@ -52,13 +52,13 @@ chrome.downloads.onCreated.addListener(async (item) => {
 
 // ---------- 2. Link clicks and 3. the right-click menu ----------
 
-// If Mini IDM is not running (or doesn't want the file), the click still
+// If Minimal Download Manager is not running (or doesn't want the file), the click still
 // works: the browser downloads it the normal way.
 async function sendOrFallback({ url, filename, referrer, kind }) {
   let accepted = false;
   try {
     accepted = await capture({ url, filename, referrer, kind });
-  } catch { /* Mini IDM is not running */ }
+  } catch { /* Minimal Download Manager is not running */ }
   if (accepted) return { ok: true };
   const opts = { url };
   if (filename && !/[\\/]/.test(filename)) opts.filename = filename;

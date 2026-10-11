@@ -1,10 +1,10 @@
 // Isolated-world content script. DOM click events are visible here, and so is
 // chrome.runtime. (A "world": "MAIN" script would have no chrome.runtime.)
 //
-// It catches plain left-clicks on links to the file types chosen in Mini IDM
+// It catches plain left-clicks on links to the file types chosen in Minimal Download Manager
 // (Options > File types) and hands them over before the browser requests the
 // URL. Holding the bypass key (Alt by default) lets the browser download it.
-// If Mini IDM can't take it, the browser downloads it the normal way.
+// If Minimal Download Manager can't take it, the browser downloads it the normal way.
 
 (() => {
   const FALLBACK = 'zip rar 7z gz tar iso exe msi apk dmg mp4 mkv avi mov mp3 flac wav pdf'.split(' ');

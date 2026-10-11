@@ -16,7 +16,7 @@ const { fetchPage } = require('../engine/downloader');
 const { credentialsFor } = require('../engine/rules');
 const { EXTENSION_ID } = require('../engine/config');
 
-const REPO = 'newroidorder/mini-idm';
+const REPO = 'newroidorder/minimal-download-manager';
 const LINKS = {
   home: `https://github.com/${REPO}`,
   help: `https://github.com/${REPO}#readme`,

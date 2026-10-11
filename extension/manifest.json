@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Mini IDM",
-  "version": "2.0.1",
-  "description": "Connects your browser to the Mini IDM program: downloads, link clicks and videos go to Mini IDM.",
+  "name": "Minimal Download Manager",
+  "version": "2.1.0",
+  "description": "Connects your browser to the Minimal Download Manager program: downloads, link clicks and videos go to it.",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAhvXCCDR9DEh384anLV1ATRaxGRgY8HHkMq0PAj5JSDxjdBIpUAVPmFlRBI0JkbQ3n2ifF8ZWvd6TL2HDyFNH8HmuD6Q3hQthNxBEfIUrEX9gFOvbnsJ+3i0ef4/DDQ0iviFRwS33YD0Ye7hjSEzEmOuXVSoWpSVIL3z9VuDezwKKHLSOiTlKHfDCOqnfw6EpJnsJyMaz19NtQRPs790Wtx9HP9UalnOZoLf3F47qhYB1RVHE268iT3ERc9JsCJgz5CoMagMiGePh+WcwLAs6Rx34gL2BRqcEieJ9l+7bUcteK5C3C/J0LooML4pPWsdsSQKPSWohUwTkw5Ah9E7SkwIDAQAB",
   "minimum_chrome_version": "119",
   "permissions": [
@@ -35,7 +35,7 @@
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Mini IDM",
+    "default_title": "Minimal Download Manager",
     "default_icon": {
       "16": "icons/16.png",
       "32": "icons/32.png"

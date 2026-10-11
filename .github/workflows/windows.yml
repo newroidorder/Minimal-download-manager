@@ -30,8 +30,8 @@ jobs:
         run: npx electron-builder --win nsis --x64 --publish never
       - uses: actions/upload-artifact@v4
         with:
-          name: Mini-IDM-Setup
-          path: app/dist/Mini-IDM-Setup-*.exe
+          name: Minimal-Download-Manager-Setup
+          path: app/dist/Minimal-Download-Manager-Setup-*.exe
           if-no-files-found: error
       # Every successful build of main publishes the installer as the release
       # for the version in app/package.json (tag v<version>, created here).
@@ -44,7 +44,7 @@ jobs:
           VERSION=$(node -p "require('./package.json').version")
           TAG="v$VERSION"
           if ! gh release view "$TAG" >/dev/null 2>&1; then
-            gh release create "$TAG" --target "$GITHUB_SHA" --title "Mini IDM $VERSION" \
-              --notes "Download **Mini-IDM-Setup-$VERSION.exe** below and run it. Windows may say the publisher is unknown: click *More info* → *Run anyway*. Then follow *Connect your browser* in the README."
+            gh release create "$TAG" --target "$GITHUB_SHA" --title "Minimal Download Manager $VERSION" \
+              --notes "Download **Minimal-Download-Manager-Setup-$VERSION.exe** below and run it. Windows may say the publisher is unknown: click *More info* → *Run anyway*. Then follow *Connect your browser* in the README."
           fi
-          gh release upload "$TAG" dist/Mini-IDM-Setup-*.exe --clobber
+          gh release upload "$TAG" dist/Minimal-Download-Manager-Setup-*.exe --clobber

@@ -43,7 +43,7 @@ test('browser bridge', async (t) => {
   const ext = { Origin: EXT, 'Content-Type': 'application/json' };
   const capture = (body, headers = ext) => request(port, { method: 'POST', path: '/api/capture', headers, body });
 
-  await t.test('the Mini IDM extension needs no setup; everyone else is refused', async () => {
+  await t.test('the Minimal Download Manager extension needs no setup; everyone else is refused', async () => {
     assert.deepEqual((await request(port, { path: '/api/ping', headers: { Origin: EXT } })).json, { app: 'mini-idm', version: '2.0.0' });
     assert.equal((await request(port, { path: '/api/ping' })).status, 401, 'no origin, no token');
     assert.equal((await request(port, { path: '/api/ping', headers: { Origin: 'chrome-extension://abcdefghijklmnopabcdefghijklmnop' } })).status, 403, 'another extension');
@@ -80,7 +80,7 @@ test('browser bridge', async (t) => {
     const off = await capture({ url: `${origin.base}/x.exe`, kind: 'auto', browser: 'opera' });
     assert.equal(off.json.accepted, false, 'browser switched off in Options');
     const menu = await capture({ url: `${origin.base}/site/index.html`, kind: 'menu', browser: 'opera' });
-    assert.equal(menu.json.accepted, true, 'right-click "Download with Mini IDM" always works');
+    assert.equal(menu.json.accepted, true, 'right-click "Download with Minimal Download Manager" always works');
     settings.update({ general: { browsers: { opera: true } } });
   });
 

@@ -49,7 +49,7 @@ function create(kind, params = {}, { key = kind, parent, modal = false, show = t
     backgroundColor: bg(),
     icon: ICON,
     autoHideMenuBar: true,
-    title: 'Mini IDM',
+    title: 'Minimal Download Manager',
     ...(isMain ? { titleBarStyle: 'hidden', titleBarOverlay: overlay() } : {}),
     webPreferences: {
       preload: PRELOAD,

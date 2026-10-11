@@ -1,5 +1,5 @@
 // Shared by the service worker and the popup. The extension has no settings:
-// the Mini IDM program decides what to capture (Options > File types).
+// the Minimal Download Manager program decides what to capture (Options > File types).
 
 const DEFAULT_SERVER = 'http://127.0.0.1:7878';
 
@@ -25,7 +25,7 @@ async function api(path, opts = {}) {
   return body;
 }
 
-// Is Mini IDM running? Also tells it which browser is connected.
+// Is Minimal Download Manager running? Also tells it which browser is connected.
 export async function ping() {
   try {
     return await api(`/api/ping?browser=${browserName()}`);
@@ -59,9 +59,9 @@ async function cookieHeader(url, referrer) {
 }
 
 /**
- * Hands a download to Mini IDM. kind: 'auto' (the browser started it),
- * 'click', 'menu' or 'detected'. Resolves to true when Mini IDM took it,
- * false when its rules say the browser should keep it; throws when Mini IDM
+ * Hands a download to Minimal Download Manager. kind: 'auto' (the browser started it),
+ * 'click', 'menu' or 'detected'. Resolves to true when Minimal Download Manager took it,
+ * false when its rules say the browser should keep it; throws when Minimal Download Manager
  * isn't running.
  */
 export async function capture({ url, filename, mime, referrer, kind }) {

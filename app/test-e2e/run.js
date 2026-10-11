@@ -1,6 +1,6 @@
 'use strict';
 
-// End-to-end: drives the real Mini IDM program (Electron) and the real
+// End-to-end: drives the real Minimal Download Manager program (Electron) and the real
 // browser extension (Chromium) together.
 //
 //   npm i -D playwright      (once; uses the Chromium Playwright installs)
@@ -71,7 +71,7 @@ async function shot(page, name) {
   try {
     await check('main window opens without errors', async () => {
       await main.waitForTimeout(800);
-      assert.equal(await main.title(), 'Mini IDM');
+      assert.equal(await main.title(), 'Minimal Download Manager');
       assert.equal(await main.locator('.node .nl').first().textContent(), LANG === 'pt-BR' ? 'Todos os downloads' : 'All downloads');
       await shot(main, 'main-empty');
     });
@@ -218,7 +218,7 @@ async function shot(page, name) {
       await shot(pr, 'dialog-properties');
       await pr.close();
       await main.click('.menubar button[data-menu="help"]');
-      await main.click('.menu .mi:has-text("About Mini IDM")');
+      await main.click('.menu .mi:has-text("About Minimal Download Manager")');
       const ab = await win('/about.html');
       await ab.waitForFunction(() => /\d+\.\d+\.\d+/.test(document.getElementById('version').textContent));
       await clickClosing(ab, '#close');

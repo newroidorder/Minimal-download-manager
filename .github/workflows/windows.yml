@@ -33,11 +33,18 @@ jobs:
           name: Mini-IDM-Setup
           path: app/dist/Mini-IDM-Setup-*.exe
           if-no-files-found: error
-      - name: Attach to the release
-        if: startsWith(github.ref, 'refs/tags/v')
+      # Every successful build of main publishes the installer as the release
+      # for the version in app/package.json (tag v<version>, created here).
+      - name: Publish the release
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || gh release create "$GITHUB_REF_NAME" --title "Mini IDM ${GITHUB_REF_NAME#v}" --notes "Download **Mini-IDM-Setup-${GITHUB_REF_NAME#v}.exe** below and run it."
-          gh release upload "$GITHUB_REF_NAME" dist/Mini-IDM-Setup-*.exe --clobber
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="v$VERSION"
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" --target "$GITHUB_SHA" --title "Mini IDM $VERSION" \
+              --notes "Download **Mini-IDM-Setup-$VERSION.exe** below and run it. Windows may say the publisher is unknown: click *More info* → *Run anyway*. Then follow *Connect your browser* in the README."
+          fi
+          gh release upload "$TAG" dist/Mini-IDM-Setup-*.exe --clobber

@@ -2,7 +2,7 @@
 
 A download manager for Windows modelled on Internet Download Manager: the same
 layout, menus, Options tabs, categories, queues and scheduler, with a 2026
-Windows 11 look, dark mode, and English or Brazilian Portuguese.
+Windows 11 look, dark mode
 
 The **program** does all the work. The small **browser extension** is only a
 connector: it hands your downloads to the program and has nothing to set up.

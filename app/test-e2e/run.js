@@ -265,7 +265,9 @@ async function shot(page, name) {
       assert.ok(origin.stats.cookies.includes('sid=httponly-secret'), `cookies seen: ${origin.stats.cookies}`);
       await clickClosing(dl, '#closeDone');
       const st = await ipc('bridge');
-      assert.ok(st.seen.chrome, 'the program shows the browser as connected');
+      assert.ok(st.seen.chrome, 'the program knows the browser is connected');
+      await main.waitForFunction(() => document.getElementById('stBridge').classList.contains('good'), null, { timeout: 20_000 });
+      assert.match(await main.textContent('#stBridge'), /Connected: Google Chrome/, 'the status bar says so');
     });
 
     await check('browser extension: a download the browser starts is taken over', async () => {

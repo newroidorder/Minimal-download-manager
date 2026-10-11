@@ -365,7 +365,7 @@ function renderStatus() {
   setChipText(limiter, lim.enabled ? t('status.limitOn', { speed: fmtSpeed(lim.kbps * 1024) }) : t('status.limitOff'));
 
   const b = $('stBridge');
-  const seen = Object.entries(S.bridge.seen || {}).filter(([, ts]) => Date.now() - ts < 120_000).map(([k]) => t(`browser.${k}`));
+  const seen = Object.entries(S.bridge.seen || {}).filter(([, ts]) => Date.now() - ts < 5 * 60_000).map(([k]) => t(`browser.${k}`));
   b.className = 'chip';
   b.replaceChildren(el('span', { class: 'dot' }));
   if (!S.bridge.listening && S.bridge.error === 'in-use') { b.classList.add('bad'); b.append(t('status.portBusy', { port: S.bridge.port })); }

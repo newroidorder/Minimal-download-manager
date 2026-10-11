@@ -19,7 +19,7 @@ connector: it hands your downloads to the program and has nothing to set up.
 
 ## Install
 
-1. Download **Mini-IDM-Setup-2.0.0.exe** from the [Releases page](../../releases) (or from the
+1. Download **Mini-IDM-Setup-2.0.1.exe** from the [Releases page](../../releases) (or from the
    latest successful **Windows build** run under Actions).
 2. Run it. The installer isn't code-signed, so Windows SmartScreen may show "Windows protected
    your PC": click **More info → Run anyway**.

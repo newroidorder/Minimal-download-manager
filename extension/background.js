@@ -25,7 +25,9 @@ chrome.runtime.onStartup.addListener(setup);
 setup(); // each time the service worker wakes up
 // The program's settings can change; pick them up every few minutes.
 chrome.alarms?.create('refresh', { periodInMinutes: 2 });
-chrome.alarms?.onAlarm.addListener((a) => { if (a.name === 'refresh') setup(); });
+// A short hello every 30 s keeps "Connected" showing in the program's status bar.
+chrome.alarms?.create('ping', { periodInMinutes: 0.5 });
+chrome.alarms?.onAlarm.addListener((a) => { if (a.name === 'refresh') setup(); else if (a.name === 'ping') ping(); });
 
 // ---------- 1. Browser-initiated downloads ----------
 

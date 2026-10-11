@@ -84,7 +84,11 @@ async function start() {
   ctx.bridge = createBridge({
     manager, settings, token: config.token, extensionIds: [EXTENSION_ID], version: app.getVersion(),
     onCapture: (result, request) => handleResult(result, request),
-    onSeen: (browser) => { ctx.bridgeState.seen[browser] = Date.now(); }
+    onSeen: (browser) => {
+      const fresh = !ctx.bridgeState.seen[browser] || Date.now() - ctx.bridgeState.seen[browser] > 60_000;
+      ctx.bridgeState.seen[browser] = Date.now();
+      if (fresh) windows.broadcast('bridge', ctx.bridgeState); // show "Connected" right away
+    }
   });
   listenBridge(config.port);
 

@@ -26,17 +26,27 @@ const DEFAULTS = {
 
 class HttpError extends Error {
   constructor(status) {
-    super(`HTTP ${status}`);
+    super(status === 401 || status === 407 ? `HTTP ${status} (login required)` : `HTTP ${status}`);
     this.status = status;
   }
 }
 
-function rawGet(url, headers, signal, idleTimeoutMs) {
+// opts.route(url) may return { agent } (tunnel through a proxy) or
+// { forward } (plain HTTP through an HTTP proxy); see proxy.js.
+async function rawGet(url, headers, signal, opts) {
   const u = new URL(url);
-  const mod = u.protocol === 'https:' ? https : http;
+  const route = opts.route ? await opts.route(u.href) : null;
   return new Promise((resolve, reject) => {
-    const req = mod.get(u, { headers, signal }, resolve);
-    req.setTimeout(idleTimeoutMs, () => req.destroy(new Error('connection timed out')));
+    let req;
+    if (route?.forward) {
+      const f = route.forward;
+      const h = { ...headers, Host: u.host, ...(f.auth ? { 'Proxy-Authorization': f.auth } : {}) };
+      req = http.get({ host: f.host, port: f.port, path: u.href, headers: h, signal }, resolve);
+    } else {
+      const mod = u.protocol === 'https:' ? https : http;
+      req = mod.get(u, { headers, signal, ...(route?.agent ? { agent: route.agent } : {}) }, resolve);
+    }
+    req.setTimeout(opts.idleTimeoutMs, () => req.destroy(new Error('connection timed out')));
     req.on('error', reject);
   });
 }
@@ -44,7 +54,7 @@ function rawGet(url, headers, signal, idleTimeoutMs) {
 // Follows redirects. Credentials are never forwarded to a different origin.
 async function open(url, headers, signal, opts, depth = 0) {
   if (depth > 10) throw new Error('too many redirects');
-  const res = await rawGet(url, headers, signal, opts.idleTimeoutMs);
+  const res = await rawGet(url, headers, signal, opts);
   if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location) {
     res.resume();
     const next = new URL(res.headers.location, url);
@@ -164,6 +174,7 @@ async function download(job, { saveDir, resolveDir, signal, onProgress = () => {
   let firstRes = null;
   let finalUrl = job.url;
   let finalHeaders = headers;
+  let lastModified = null;
   let stateTimer = null;
   let saving = Promise.resolve();
 
@@ -222,6 +233,7 @@ async function download(job, { saveDir, resolveDir, signal, onProgress = () => {
           firstRes = r.res;
           finalUrl = r.url;
           finalHeaders = r.headers;
+          lastModified = r.res.headers['last-modified'] || null;
           fd = await fsp.open(partPath(), 'r+');
         } else {
           r.res.resume(); // file changed on the server, or ranges stopped working: start over
@@ -237,6 +249,7 @@ async function download(job, { saveDir, resolveDir, signal, onProgress = () => {
       canRange = !!(cr && cr.start === 0 && cr.total);
       size = canRange ? cr.total : (parseInt(probe.res.headers['content-length'], 10) || 0);
       validator = validatorOf(probe.res);
+      lastModified = probe.res.headers['last-modified'] || null;
       finalUrl = probe.url;
       finalHeaders = probe.headers;
       firstRes = probe.res;
@@ -269,8 +282,10 @@ async function download(job, { saveDir, resolveDir, signal, onProgress = () => {
         const at = seg.pos;
         seg.pos += len;               // claim the bytes before awaiting, so a split sees the claim
         received += len;
+        if (o.limiter) await o.limiter.take(len); // pausing here slows the socket via backpressure
         await fd.write(chunk, 0, len, at);
         seg.written = at + len;
+        if (o.onBytes) o.onBytes(len);
         progress();
         if (seg.pos > seg.end) break;
       }
@@ -350,7 +365,7 @@ async function download(job, { saveDir, resolveDir, signal, onProgress = () => {
     await fsp.rename(partPath(), dest);
     await fsp.unlink(statePath()).catch(() => {});
     onProgress({ dest, filename: path.basename(dest), size: size || received, received, speed: 0, connections: 0, progress: 100 });
-    return { status: 'done', dest, size: size || received };
+    return { status: 'done', dest, size: size || received, lastModified };
   } catch (err) {
     clearInterval(stateTimer);
     if (fd) await fd.close().catch(() => {});
@@ -402,4 +417,20 @@ async function inspect(url, { headers = {}, signal, ...overrides } = {}) {
   };
 }
 
-module.exports = { download, inspect, sanitize, filenameFromDisposition, filenameFromUrl, HttpError };
+// For the Site Grabber: fetches a page and returns its text if it is HTML.
+async function fetchPage(url, { headers = {}, signal, maxBytes = 5 * 1024 * 1024, ...overrides } = {}) {
+  const o = { ...DEFAULTS, ...overrides };
+  const { res, url: finalUrl } = await open(url, headers, signal, o);
+  const contentType = res.headers['content-type'] || '';
+  if (!/html/i.test(contentType)) { res.destroy(); return { url: finalUrl, contentType }; }
+  const chunks = [];
+  let size = 0;
+  for await (const c of res) {
+    size += c.length;
+    if (size > maxBytes) { res.destroy(); break; }
+    chunks.push(c);
+  }
+  return { url: finalUrl, contentType, text: Buffer.concat(chunks).toString('utf8') };
+}
+
+module.exports = { download, inspect, fetchPage, sanitize, filenameFromDisposition, filenameFromUrl, HttpError };

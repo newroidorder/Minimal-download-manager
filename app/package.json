@@ -1,0 +1,15 @@
+{
+  "name": "mini-idm",
+  "productName": "Mini IDM",
+  "version": "2.0.0",
+  "private": true,
+  "description": "A download manager for Windows modelled on Internet Download Manager",
+  "main": "main/index.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test --test-timeout=60000 \"test/*.test.js\"",
+    "test:e2e": "node test-e2e/run.js",
+    "dist": "electron-builder --win nsis --x64"
+  },
+  "engines": { "node": ">=18.17" }
+}

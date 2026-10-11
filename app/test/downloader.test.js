@@ -4,7 +4,7 @@ const test = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs');
 const path = require('path');
-const { download } = require('../lib/downloader');
+const { download } = require('../engine/downloader');
 const { BODY, sha256, tmpDir, startOrigin } = require('./helpers');
 
 const FAST = { retryBaseMs: 10, progressIntervalMs: 20, stateIntervalMs: 50 };

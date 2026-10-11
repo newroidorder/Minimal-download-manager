@@ -3,17 +3,31 @@
   "name": "Mini IDM",
   "version": "1.0.0",
   "description": "Sends downloads to the local Mini IDM server for segmented, resumable downloading.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAhvXCCDR9DEh384anLV1ATRaxGRgY8HHkMq0PAj5JSDxjdBIpUAVPmFlRBI0JkbQ3n2ifF8ZWvd6TL2HDyFNH8HmuD6Q3hQthNxBEfIUrEX9gFOvbnsJ+3i0ef4/DDQ0iviFRwS33YD0Ye7hjSEzEmOuXVSoWpSVIL3z9VuDezwKKHLSOiTlKHfDCOqnfw6EpJnsJyMaz19NtQRPs790Wtx9HP9UalnOZoLf3F47qhYB1RVHE268iT3ERc9JsCJgz5CoMagMiGePh+WcwLAs6Rx34gL2BRqcEieJ9l+7bUcteK5C3C/J0LooML4pPWsdsSQKPSWohUwTkw5Ah9E7SkwIDAQAB",
   "minimum_chrome_version": "119",
-  "permissions": ["downloads", "cookies", "webRequest", "storage", "contextMenus"],
-  "host_permissions": ["<all_urls>"],
+  "permissions": [
+    "downloads",
+    "cookies",
+    "webRequest",
+    "storage",
+    "contextMenus"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
   "background": {
     "service_worker": "background.js",
     "type": "module"
   },
   "content_scripts": [
     {
-      "matches": ["http://*/*", "https://*/*"],
-      "js": ["content.js"],
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ],
+      "js": [
+        "content.js"
+      ],
       "run_at": "document_idle",
       "all_frames": true
     }

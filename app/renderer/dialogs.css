@@ -1,0 +1,66 @@
+/* Shared styles for the dialog windows. */
+
+.cols2 { display: grid; grid-template-columns: 1fr 1.6fr; gap: 0 12px; }
+.cols3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0 12px; }
+.info-line { color: var(--muted); margin: 4px 0 0; }
+.small-select { min-height: 32px; max-width: 170px; }
+.name { margin: 0 0 2px; font-weight: 600; font-size: 1.05em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.url { margin: 0; color: var(--muted); font-size: .9em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar.big { height: 10px; border-radius: 5px; margin: 14px 0 12px; }
+.bar.big > div { border-radius: 5px; }
+dl.stats { display: grid; grid-template-columns: max-content 1fr; gap: 5px 18px; margin: 0 0 12px; }
+dl.stats dt { color: var(--muted); }
+dl.stats dd { margin: 0; font-variant-numeric: tabular-nums; min-width: 0; }
+dl.stats dd.path { overflow-wrap: anywhere; }
+.seg-head { display: flex; justify-content: space-between; margin-bottom: 4px; }
+#segments { display: block; width: 100%; height: 16px; border-radius: 4px; }
+.complete-file { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.complete-file .ficon { width: 36px; height: 42px; }
+.done-title svg.i { color: var(--ok) !important; }
+.split { display: flex; gap: 14px; min-height: 0; }
+.nav { width: 200px; flex: none; display: flex; flex-direction: column; gap: 2px; }
+.nav button { display: flex; align-items: center; gap: 10px; text-align: left; background: none; border: 0; padding: 8px 10px; border-radius: 6px; position: relative; }
+.nav button:hover { background: var(--hover); }
+.nav button.on { background: var(--selected); color: var(--selected-text); }
+.nav button.on::before { content: ''; position: absolute; left: 0; top: 9px; bottom: 9px; width: 3px; border-radius: 2px; background: var(--accent); }
+.nav button svg.i { color: var(--muted); }
+.nav button.on svg.i { color: var(--accent); }
+.pane-title { margin: 0 0 14px; font-size: 1.15em; font-weight: 600; }
+.list-buttons { display: flex; gap: 6px; margin-top: 8px; }
+.inline { display: inline-flex; align-items: center; gap: 8px; }
+.kv { display: grid; grid-template-columns: 140px 1fr; gap: 8px 12px; align-items: center; }
+.kv > span { color: var(--muted); }
+.days { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 6px; }
+.badge-run { display: inline-block; padding: 1px 8px; border-radius: 10px; background: var(--ok); color: #fff; font-size: .85em; }
+.results { height: 100%; }
+.mono { font-family: Consolas, "Cascadia Mono", monospace; font-size: .92em; }
+.indent { margin: 10px 0 0 24px; }
+.gap-top { margin-top: 16px; }
+.about-body { text-align: center; padding-top: 28px; }
+.about-body h1 { margin: 8px 0 2px; font-size: 1.5em; }
+.about-logo { width: 72px; height: 72px; }
+.about-links { justify-content: center; margin-top: 16px; }
+.col-fill { display: flex; flex-direction: column; }
+.grow-box { flex: 1; min-height: 120px; }
+.grab-form { display: flex; gap: 12px; }
+.grab-form .grow { flex: 1; }
+.grow { flex: 1; min-width: 0; }
+td .ficon { width: 16px; height: 19px; vertical-align: middle; }
+.queue-nav { gap: 6px; }
+.queue-list { display: flex; flex-direction: column; gap: 2px; flex: 1; overflow: auto; }
+.queue-list button { display: flex; align-items: center; gap: 8px; }
+.queue-list button svg.i { display: none; }
+.run-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); }
+.options { overflow: hidden; padding-bottom: 12px; }
+.options .sections { overflow: auto; padding-right: 8px; }
+.browser-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 24px; margin-top: 8px; }
+.browser-row { align-items: center; }
+.browser-row .hint { margin: 0; font-size: .85em; }
+.steps { margin: 0 0 10px; padding-left: 20px; }
+.steps li { margin-bottom: 4px; }
+.cat-table { max-height: 230px; }
+.small-table { max-height: 150px; }
+.wide { width: 100%; }
+.nowrap { white-space: nowrap; }
+.gap-top-s { margin-top: 8px; }
+.kv { grid-template-columns: minmax(140px, max-content) 1fr; }

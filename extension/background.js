@@ -1,11 +1,31 @@
-// Three capture paths, in order of how IDM's own extension behaves:
+// The extension is only a connector, like IDM's: it hands downloads to the
+// Mini IDM program, which decides what to capture (Options > File types).
 // 1. Downloads the browser starts on its own (chrome.downloads.onCreated).
-// 2. Link clicks on file-looking links (content.js), so the browser never
-//    spends a one-time download URL itself.
-// 3. Media/file responses seen on the page (webRequest, observe only). These
-//    are listed in the popup and are never downloaded automatically.
+// 2. Clicks on file links (content.js), before the browser requests the URL,
+//    so one-time links are not used up.
+// 3. Right-click "Download with Mini IDM".
+// 4. Media and files seen in page traffic (webRequest, observe only), listed
+//    in the popup and never downloaded automatically.
 
-import { getSettings, sendToServer, detectedKey } from './lib.js';
+import { server, ping, refreshConfig, capture, detectedKey } from './lib.js';
+
+// ---------- startup ----------
+
+async function setup() {
+  await ping();
+  const config = await refreshConfig();
+  await chrome.contextMenus.removeAll();
+  if (config?.contextMenu !== false) {
+    chrome.contextMenus.create({ id: 'mini-idm-link', title: chrome.i18n.getUILanguage().startsWith('pt') ? 'Baixar com o Mini IDM' : 'Download with Mini IDM', contexts: ['link'] });
+    chrome.contextMenus.create({ id: 'mini-idm-media', title: chrome.i18n.getUILanguage().startsWith('pt') ? 'Baixar esta mídia com o Mini IDM' : 'Download this media with Mini IDM', contexts: ['video', 'audio'] });
+  }
+}
+chrome.runtime.onInstalled.addListener(setup);
+chrome.runtime.onStartup.addListener(setup);
+setup(); // each time the service worker wakes up
+// The program's settings can change; pick them up every few minutes.
+chrome.alarms?.create('refresh', { periodInMinutes: 2 });
+chrome.alarms?.onAlarm.addListener((a) => { if (a.name === 'refresh') setup(); });
 
 // ---------- 1. Browser-initiated downloads ----------
 
@@ -15,51 +35,45 @@ chrome.downloads.onCreated.addListener(async (item) => {
   const url = item.finalUrl || item.url;
   if (!/^https?:/i.test(url)) return; // blob:, data:, filesystem: only exist inside the browser
 
-  const s = await getSettings();
-  if (!s.captureDownloads || !s.token) return;
-
-  // Hand off first, and cancel only after the server has accepted it.
-  // A cancelled Chrome download can't be resumed, so this order never loses a file.
+  // Hand off first; cancel only after Mini IDM accepted it. A cancelled
+  // download can't be resumed, so if Mini IDM is closed the browser keeps it.
+  let accepted = false;
   try {
-    await sendToServer({ url, referrer: item.referrer });
+    accepted = await capture({ url, filename: (item.filename || '').split(/[\\/]/).pop(), mime: item.mime, referrer: item.referrer, kind: 'auto' });
   } catch {
     return;
   }
+  if (!accepted) return;
   await chrome.downloads.cancel(item.id).catch(() => {});
   await chrome.downloads.erase({ id: item.id }).catch(() => {});
 });
 
-// ---------- 2. Link clicks (from content.js) and the context menu ----------
+// ---------- 2. Link clicks and 3. the right-click menu ----------
 
-async function sendOrFallback({ url, filename, referrer }) {
+// If Mini IDM is not running (or doesn't want the file), the click still
+// works: the browser downloads it the normal way.
+async function sendOrFallback({ url, filename, referrer, kind }) {
+  let accepted = false;
   try {
-    await sendToServer({ url, filename, referrer });
-    return { ok: true };
-  } catch (err) {
-    // The click was already cancelled, so let the browser download it instead.
-    const opts = { url };
-    if (filename && !/[\\/]/.test(filename)) opts.filename = filename;
-    await chrome.downloads.download(opts).catch(() => chrome.downloads.download({ url }));
-    return { ok: false, error: err.message };
-  }
+    accepted = await capture({ url, filename, referrer, kind });
+  } catch { /* Mini IDM is not running */ }
+  if (accepted) return { ok: true };
+  const opts = { url };
+  if (filename && !/[\\/]/.test(filename)) opts.filename = filename;
+  await chrome.downloads.download(opts).catch(() => chrome.downloads.download({ url }));
+  return { ok: false };
 }
 
 chrome.runtime.onMessage.addListener((msg, sender, reply) => {
   if (msg?.type === 'click' && sender.tab) {
-    sendOrFallback({ url: msg.url, filename: msg.filename, referrer: msg.referrer }).then(reply);
+    sendOrFallback({ url: msg.url, filename: msg.filename, referrer: msg.referrer, kind: 'click' }).then(reply);
     return true; // async reply
   }
 });
 
-chrome.runtime.onInstalled.addListener(() => {
-  chrome.contextMenus.create({ id: 'mini-idm-link', title: 'Download link with Mini IDM', contexts: ['link'] });
-  chrome.contextMenus.create({ id: 'mini-idm-media', title: 'Download this media with Mini IDM', contexts: ['video', 'audio'] });
-  getSettings().then(s => { if (!s.token) chrome.runtime.openOptionsPage(); });
-});
-
 chrome.contextMenus.onClicked.addListener((info) => {
   const url = info.menuItemId === 'mini-idm-link' ? info.linkUrl : info.srcUrl;
-  if (url && /^https?:/i.test(url)) sendOrFallback({ url, referrer: info.pageUrl });
+  if (url && /^https?:/i.test(url)) sendOrFallback({ url, referrer: info.pageUrl, kind: 'menu' });
 });
 
 // ---------- 3. Detect media and files in page traffic ----------
@@ -126,8 +140,8 @@ chrome.webRequest.onHeadersReceived.addListener((d) => {
   else if (FILE_TYPES.has(type) && (d.type === 'main_frame' || d.type === 'sub_frame' || total >= MIN_MEDIA_BYTES)) kind = 'file';
   if (!kind) return;
 
-  getSettings().then(s => {
-    if (d.url.startsWith(s.server)) return;
+  server().then((base) => {
+    if (d.url.startsWith(base)) return;
     record(d.tabId, { url: d.url, kind, type, size: total || 0, filename: filenameFrom(disposition, d.url), referrer: d.initiator || '', seenAt: Date.now() });
   });
 }, { urls: ['http://*/*', 'https://*/*'], types: ['main_frame', 'sub_frame', 'media', 'xmlhttprequest', 'object', 'other'] }, ['responseHeaders']);

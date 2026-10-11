@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:">
+  <title>Mini IDM</title>
+  <link rel="stylesheet" href="common.css">
+  <link rel="stylesheet" href="dialogs.css">
+</head>
+<body class="dialog" data-title="sched.title">
+  <div class="dlg-body split">
+    <div class="nav queue-nav">
+      <div class="label" data-i18n="sched.queues"></div>
+      <div id="queueList" class="queue-list"></div>
+      <div class="list-buttons">
+        <button class="btn small" id="newQueue" data-icon="add"><span data-i18n="sched.new"></span></button>
+        <button class="btn small" id="deleteQueue" data-icon="remove"><span data-i18n="sched.delete"></span></button>
+      </div>
+    </div>
+    <div class="grow col-fill">
+      <div class="row seg-head">
+        <input type="text" id="qName" class="grow" data-i18n-placeholder="sched.name">
+        <span class="badge-run" id="running" data-i18n="queue.running" hidden></span>
+      </div>
+      <div class="tabs" role="tablist">
+        <button class="on" data-tab="schedule" data-i18n="sched.tabSchedule"></button>
+        <button data-tab="files" data-i18n="sched.tabFiles"></button>
+      </div>
+      <div data-pane="schedule">
+        <div class="group">
+          <label class="check"><input type="checkbox" id="sEnabled"> <span class="label" data-i18n="sched.startAt"></span></label>
+          <div class="indent">
+            <div class="row"><span data-i18n="sched.time"></span> <input type="time" id="sTime"></div>
+            <label class="check gap-top"><input type="radio" name="mode" value="once"> <span data-i18n="sched.once"></span></label>
+            <div class="indent"><input type="date" id="sDate"></div>
+            <label class="check gap-top"><input type="radio" name="mode" value="daily"> <span data-i18n="sched.daily"></span></label>
+            <div class="indent days" id="days"></div>
+          </div>
+        </div>
+        <div class="group">
+          <label class="check"><input type="checkbox" id="stopOn"> <span class="label" data-i18n="sched.stopAt"></span></label>
+          <div class="indent row"><input type="time" id="stopTime"></div>
+        </div>
+        <div class="group kv">
+          <span data-i18n="sched.atOnce"></span><div class="row"><input type="number" id="maxConc" min="1" max="20"> <span data-i18n="sched.files"></span></div>
+          <span data-i18n="sched.after"></span>
+          <select id="after">
+            <option value="none" data-i18n="sched.afterNone"></option>
+            <option value="exit" data-i18n="sched.afterExit"></option>
+            <option value="shutdown" data-i18n="sched.afterShutdown"></option>
+            <option value="sleep" data-i18n="sched.afterSleep"></option>
+          </select>
+        </div>
+      </div>
+      <div data-pane="files" class="col-fill grow" hidden>
+        <p class="hint" data-i18n="sched.filesHint"></p>
+        <div class="table-box grow-box">
+          <table class="grid">
+            <thead><tr><th>#</th><th data-i18n="col.name"></th><th data-i18n="col.size"></th><th data-i18n="col.status"></th></tr></thead>
+            <tbody id="files"></tbody>
+          </table>
+        </div>
+        <div class="list-buttons">
+          <button class="btn small" id="up" data-icon="up"><span data-i18n="sched.up"></span></button>
+          <button class="btn small" id="down" data-icon="down"><span data-i18n="sched.down"></span></button>
+          <button class="btn small" id="unqueue" data-icon="close"><span data-i18n="menu.removeFromQueue"></span></button>
+        </div>
+      </div>
+      <p class="error" id="error" hidden></p>
+    </div>
+  </div>
+  <div class="dlg-footer">
+    <button class="btn" id="startNow" data-icon="startQueue"><span data-i18n="sched.startNow"></span></button>
+    <button class="btn" id="stopNow" data-icon="stopQueue"><span data-i18n="sched.stopNow"></span></button>
+    <span class="spacer"></span>
+    <button class="btn" id="close" data-i18n="common.close"></button>
+    <button class="btn primary" id="apply" data-i18n="common.apply"></button>
+  </div>
+  <script type="module" src="scheduler.js"></script>
+</body>
+</html>

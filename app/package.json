@@ -11,5 +11,74 @@
     "test:e2e": "node test-e2e/run.js",
     "dist": "electron-builder --win nsis --x64"
   },
-  "engines": { "node": ">=18.17" }
+  "engines": {
+    "node": ">=18.17"
+  },
+  "devDependencies": {
+    "electron": "^44.7.0",
+    "electron-builder": "^26.15.3",
+    "lucide-static": "^0.545.0"
+  },
+  "author": "Mini IDM",
+  "build": {
+    "appId": "com.miniidm.app",
+    "productName": "Mini IDM",
+    "copyright": "Mini IDM",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main/**",
+      "engine/**",
+      "renderer/**",
+      "locales/**",
+      "build/icon.png",
+      "build/tray.png",
+      "build/tray@2x.png",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../extension",
+        "to": "extension"
+      }
+    ],
+    "protocols": [
+      {
+        "name": "Mini IDM",
+        "schemes": [
+          "miniidm"
+        ]
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png",
+      "artifactName": "Mini-IDM-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Mini IDM",
+      "runAfterFinish": true,
+      "deleteAppDataOnUninstall": false,
+      "installerLanguages": [
+        "en_US",
+        "pt_BR"
+      ],
+      "multiLanguageInstaller": true
+    },
+    "publish": null
+  }
 }

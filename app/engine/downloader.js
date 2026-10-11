@@ -205,6 +205,7 @@ async function download(job, { saveDir, resolveDir, signal, onProgress = () => {
     onProgress({
       dest, filename: path.basename(dest), size, received, speed,
       connections: segments.filter(s => s.active).length,
+      resumable: canRange,
       progress: size ? Math.min(99, Math.floor(received / size * 100)) : 0,
       // [start, written, end) per segment, for an IDM-style connection bar
       segments: size ? segments.map(s => [s.start, s.written, s.end + 1]) : []

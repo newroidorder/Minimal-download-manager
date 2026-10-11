@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; media-src 'self' blob: data:">
+  <title>Mini IDM</title>
+  <link rel="stylesheet" href="common.css">
+  <link rel="stylesheet" href="main.css">
+</head>
+<body class="main" data-title="app.title">
+  <header class="titlebar">
+    <div class="brand"><img src="logo.svg" alt=""><span>Mini IDM</span></div>
+    <nav class="menubar" id="menubar" role="menubar">
+      <button data-menu="tasks" data-menu-anchor data-i18n="menu.tasks"></button>
+      <button data-menu="file" data-menu-anchor data-i18n="menu.file"></button>
+      <button data-menu="downloads" data-menu-anchor data-i18n="menu.downloads"></button>
+      <button data-menu="view" data-menu-anchor data-i18n="menu.view"></button>
+      <button data-menu="help" data-menu-anchor data-i18n="menu.help"></button>
+    </nav>
+    <div class="drag"></div>
+  </header>
+
+  <div class="toolbar" id="toolbar" role="toolbar">
+    <button class="tb" data-act="add" data-icon="add"><span data-i18n="tb.add"></span></button>
+    <span class="tb-sep"></span>
+    <button class="tb" data-act="resume" data-icon="resume"><span data-i18n="tb.resume"></span></button>
+    <button class="tb" data-act="stop" data-icon="stop"><span data-i18n="tb.stop"></span></button>
+    <button class="tb" data-act="stopAll" data-icon="stopAll"><span data-i18n="tb.stopAll"></span></button>
+    <span class="tb-sep"></span>
+    <button class="tb" data-act="remove" data-icon="remove"><span data-i18n="tb.remove"></span></button>
+    <button class="tb" data-act="removeDone" data-icon="removeDone"><span data-i18n="tb.removeDone"></span></button>
+    <span class="tb-sep"></span>
+    <button class="tb" data-act="options" data-icon="options"><span data-i18n="tb.options"></span></button>
+    <button class="tb" data-act="scheduler" data-icon="scheduler"><span data-i18n="tb.scheduler"></span></button>
+    <span class="tb-sep"></span>
+    <div class="tb-split">
+      <button class="tb" data-act="startQueue" data-icon="startQueue"><span data-i18n="tb.startQueue"></span></button>
+      <button class="tb-drop" data-act="startQueueMenu" data-menu-anchor data-icon="chevronDown" data-i18n-aria="tb.chooseQueue"></button>
+    </div>
+    <div class="tb-split">
+      <button class="tb" data-act="stopQueue" data-icon="stopQueue"><span data-i18n="tb.stopQueue"></span></button>
+      <button class="tb-drop" data-act="stopQueueMenu" data-menu-anchor data-icon="chevronDown" data-i18n-aria="tb.chooseQueue"></button>
+    </div>
+    <span class="tb-sep"></span>
+    <button class="tb" data-act="grabber" data-icon="grabber"><span data-i18n="tb.grabber"></span></button>
+    <div class="tb-flex"></div>
+    <label class="search" data-icon="search">
+      <input id="search" type="search" data-i18n-placeholder="tb.search" autocomplete="off" spellcheck="false">
+    </label>
+  </div>
+
+  <div class="body" id="body">
+    <aside class="sidebar" id="sidebar">
+      <div class="side-head">
+        <span data-i18n="side.categories"></span>
+        <button class="btn ghost icon small" id="hideSide" data-icon="close" data-i18n-title="side.hide"></button>
+      </div>
+      <ul class="tree" id="tree" role="tree"></ul>
+    </aside>
+    <div class="splitter" id="splitter"></div>
+    <main class="listwrap">
+      <div class="list" id="list" tabindex="0" role="grid">
+        <div class="thead" id="thead" role="row"></div>
+        <div class="tbody" id="tbody"></div>
+        <div class="empty-note" id="empty" hidden></div>
+      </div>
+    </main>
+  </div>
+
+  <footer class="statusbar" id="statusbar">
+    <span id="stCount"></span>
+    <span class="st-sep"></span>
+    <span id="stSpeed" data-icon="download"></span>
+    <button class="chip" id="stLimiter" data-icon="limiter"></button>
+    <span class="st-flex"></span>
+    <button class="chip" id="stBridge"></button>
+  </footer>
+
+  <div class="overlay" id="confirm" hidden>
+    <div class="confirm-box" role="dialog" aria-modal="true">
+      <h2 id="cfTitle"></h2>
+      <p id="cfText"></p>
+      <label class="check" id="cfCheckRow"><input type="checkbox" id="cfCheck"> <span id="cfCheckLabel"></span></label>
+      <div class="cf-buttons">
+        <button class="btn" id="cfNo" data-i18n="common.cancel"></button>
+        <button class="btn primary" id="cfYes"></button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="main.js"></script>
+</body>
+</html>

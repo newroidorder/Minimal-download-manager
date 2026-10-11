@@ -1,37 +1,47 @@
 // Isolated-world content script. DOM click events are visible here, and so is
 // chrome.runtime. (A "world": "MAIN" script would have no chrome.runtime.)
 //
-// It catches plain left-clicks on links that look like files and hands them to
-// the background before the browser requests the URL. If the server can't take
-// the download, the background starts a normal browser download instead, so a
-// click is never lost.
+// It catches plain left-clicks on links to the file types chosen in Mini IDM
+// (Options > File types) and hands them over before the browser requests the
+// URL. Holding the bypass key (Alt by default) lets the browser download it.
+// If Mini IDM can't take it, the browser downloads it the normal way.
 
 (() => {
-  const FILE_EXT = /\.(zip|rar|7z|tar|gz|tgz|bz2|xz|iso|img|exe|msi|dmg|pkg|deb|rpm|apk|appimage|mp4|mkv|avi|mov|wmv|webm|flv|mp3|flac|wav|m4a|ogg|torrent)$/i;
-  let enabled = false;
+  const FALLBACK = 'zip rar 7z gz tar iso exe msi apk dmg mp4 mkv avi mov mp3 flac wav pdf'.split(' ');
+  let exts = new Set(FALLBACK);
+  let bypassKey = 'alt';
 
-  const refresh = () => chrome.storage.local.get(['captureClicks', 'token'])
-    .then(s => { enabled = s.captureClicks !== false && !!s.token; })
-    .catch(() => { enabled = false; });
+  const refresh = () => chrome.storage.local.get('config')
+    .then(({ config }) => {
+      if (Array.isArray(config?.captureExts)) exts = new Set(config.captureExts);
+      bypassKey = config?.bypassKey || 'alt';
+    })
+    .catch(() => {});
   refresh();
   chrome.storage.onChanged.addListener(refresh);
+
+  const extOf = (path) => { const m = /\.([a-z0-9]{1,10})$/i.exec(path); return m ? m[1].toLowerCase() : ''; };
 
   // Bubble phase on window: runs after the page's own handlers, so links the
   // page already handles (e.defaultPrevented) are left alone.
   window.addEventListener('click', (e) => {
-    if (!enabled || e.defaultPrevented || e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+    if (e.defaultPrevented || e.button !== 0 || e.ctrlKey || e.metaKey) return;
+    if ((bypassKey === 'alt' && e.altKey) || (bypassKey === 'shift' && e.shiftKey)) return;
+    if (e.altKey || e.shiftKey) return; // other modifier clicks keep their browser meaning
     const a = e.target instanceof Element && e.target.closest('a[href]');
     if (!a) return;
     let url;
     try { url = new URL(a.href); } catch { return; }
     if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
-    if (!a.hasAttribute('download') && !FILE_EXT.test(url.pathname)) return;
+    let path = url.pathname;
+    try { path = decodeURIComponent(path); } catch { /* keep raw */ }
+    if (!exts.has(extOf(path))) return;
 
     try {
       chrome.runtime.sendMessage({ type: 'click', url: url.href, filename: a.getAttribute('download') || null, referrer: location.href })
         .catch(() => {});
     } catch {
-      return; // extension was reloaded; this page's script is orphaned, so let the browser handle it
+      return; // the extension was reloaded; this page's script is orphaned, so let the browser handle it
     }
     e.preventDefault();
   });

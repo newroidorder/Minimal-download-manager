@@ -1,185 +1,123 @@
 # Mini IDM
 
-A small download manager modelled on Internet Download Manager's architecture: a
-browser extension catches downloads and hands them to a local engine. The engine
-downloads each file over several parallel HTTP connections, can pause and resume,
-and shows progress live.
+A download manager for Windows modelled on Internet Download Manager: the same
+layout, menus, Options tabs, categories, queues and scheduler, with a 2026
+Windows 11 look, dark mode, and English or Brazilian Portuguese.
 
-Node.js ≥ 18.17 with **zero runtime dependencies**, plus a Chrome/Edge (MV3) extension.
+The **program** does all the work. The small **browser extension** is only a
+connector: it hands your downloads to the program and has nothing to set up.
 
-![Mini IDM web UI](docs/screenshot.png)
+![Mini IDM main window](docs/screenshots/main-list.png)
 
-## How it maps to IDM
-
-| IDM | Mini IDM | Notes |
+| Download File Info | Progress | Download complete |
 |---|---|---|
-| `IDMGCExt.crx` browser extension | `extension/` | Same three capture paths: browser-started downloads, link clicks, and media seen in page traffic |
-| `IDMMsgHost.exe` native messaging bridge | `POST /api/downloads` on `127.0.0.1` with a bearer token | Simpler to run. See [Roadmap](#roadmap) for the native-messaging version |
-| `IDMan.exe` segmented engine | `server/lib/downloader.js` | Dynamic segmentation, in-place writes, per-segment retry, resume |
-| "Download File Info", progress and "Download complete" windows | `server/public/dialog.html` | Choose the name and folder, watch each connection, then Open / Open folder |
-| Categories (Music, Programs, Video, …) | `server/lib/settings.js` | Each file type goes to its own folder, editable in Settings |
-| Download list | `server/public/` web UI, extension popup | |
-| `idmwfp*.sys` network driver | none | A network driver only sees encrypted HTTPS bytes anyway |
+| ![](docs/screenshots/dialog-file-info.png) | ![](docs/screenshots/dialog-progress.png) | ![](docs/screenshots/dialog-complete.png) |
 
-```
- Browser                                     Local engine (Node)
-┌───────────────────────────────┐          ┌────────────────────────────────────┐
-│ content.js   link clicks      │          │ app.js     HTTP API + SSE + web UI │
-│ background.js                 │  HTTP →  │            token, Host & Origin    │
-│   downloads.onCreated takeover│ ───────▶ │            checks                  │
-│   webRequest media detection  │  POST    │ queue.js   max 3 active, persisted │
-│   context menu                │  url +   │ downloader.js                      │
-│   cookies (incl. HttpOnly)    │  cookies │   probe → steal → write in place   │
-└───────────────────────────────┘          └──────────────┬─────────────────────┘
-                                                          │ up to 8 Range connections
-                                                          ▼
-                                                     origin server
-```
-
-### What you see when you download
-
-1. **Download File Info** opens: the file name, size and type, a category (picked from the file type), and
-   the folder for that category, for example `Downloads\Music` for an `.mp3`. Change the name or folder,
-   or click **Browse…** for a folder picker. Tick *Always use this folder* to make it the category's new
-   default. Then choose **Start Download**, **Download Later**, or **Cancel**.
-2. The same window turns into the **progress** view: transfer rate, time left, number of connections,
-   and a bar showing where each connection started and how far it got.
-3. **Download complete**: **Open**, **Open folder**, or **Close**.
-
-| Download File Info | Progress | Complete |
+| Options | Scheduler | Português, dark mode |
 |---|---|---|
-| ![](docs/dialog-ask.png) | ![](docs/dialog-progress.png) | ![](docs/dialog-complete.png) |
+| ![](docs/screenshots/options-general.png) | ![](docs/screenshots/scheduler.png) | ![](docs/screenshots/main-portuguese.png) ![](docs/screenshots/main-dark.png) |
 
-Both windows can be turned off in **Settings**. Files then go straight to their category folder.
+## Install
 
-### Categories and folders
+1. Download **Mini-IDM-Setup-2.0.0.exe** from the [Releases page](../../releases) (or from the
+   latest successful **Windows build** run under Actions).
+2. Run it. The installer isn't code-signed, so Windows SmartScreen may show "Windows protected
+   your PC": click **More info → Run anyway**.
+3. Mini IDM starts and from then on starts with Windows, sitting in the notification area
+   (next to the clock). Closing the window keeps it running there, like IDM.
 
-| Category | Default folder | File types (editable) |
-|---|---|---|
-| Compressed | `Downloads\Compressed` | zip, rar, 7z, gz, tar, … |
-| Documents | `Downloads\Documents` | pdf, doc(x), xls(x), ppt(x), txt, epub, … |
-| Music | `Downloads\Music` | mp3, wav, flac, m4a, aac, ogg, … |
-| Programs | `Downloads\Programs` | exe, msi, apk, dmg, iso, … |
-| Video | `Downloads\Video` | mp4, mkv, avi, mov, webm, … |
-| General | `Downloads` | everything else |
+### Connect your browser (once)
 
-Change folders and file types in the web UI under **Settings**. They're saved in `~/.mini-idm/settings.json`.
+1. In Mini IDM open **Options → General**. Under *Browser extension* click **Open folder**.
+2. In your browser open `opera://extensions` (or `chrome://extensions`, `edge://extensions`),
+   turn on **Developer mode**, click **Load unpacked** and choose that folder.
+3. That's it. There's nothing to configure in the extension. The status bar in Mini IDM shows
+   "Connected: Opera" once the browser has talked to it.
 
-### How a download works
+If you used the earlier "npm start" version: stop that server first (it used the same port), and
+load the extension from the new folder. The extension has a new fixed ID, so remove the old one.
 
-1. **Probe**: a `GET` with `Range: bytes=0-`, not `HEAD`, because signed URLs often refuse HEAD.
-   Ranges are trusted only if the answer is `206` with `Content-Range`. A `200` means one plain stream.
-2. **Dynamic segmentation**: the probe connection keeps reading from byte 0. Each extra connection
-   (up to 8) takes the back half of the largest remaining segment, and so does any connection that
-   finishes early. This is IDM's "dynamic segmentation".
-3. **In-place writes**: every connection writes at its own offset in a pre-sized `name.part` file,
-   so there is no merge step and no double disk usage.
-4. **Resumable state**: the segment map is saved to `name.part.json` every second, recording only bytes
-   that were actually written. Pause, crash or restart, then resume with `If-Range`. If the file changed
-   on the server, it starts over.
-5. **Failures**: each segment retries with backoff from its last written byte. Any HTTP error
-   is an error, never a "completed" HTML error page.
+## What it does (the features from IDM)
 
-## Quick start
+**Main window**: menu bar (Tasks, File, Downloads, View, Help), toolbar (Add URL, Resume, Stop,
+Stop all, Delete, Delete completed, Options, Scheduler, Start/Stop queue, Grabber), category tree
+(All downloads → Compressed, Documents, Music, Programs, Video, General; Unfinished; Finished;
+Grabber projects; Queues), sortable and resizable columns (File name, Queue, Size, Status, Time left,
+Transfer rate, Last try, Description), right-click menu, search, status bar with total speed.
 
-```bash
-cd server
-npm start
-# Mini IDM running at http://127.0.0.1:7878
-# Saving to:       ~/Downloads (sorted into category folders)
-# Extension token: <token>
-```
+**Downloading**: up to 32 connections per file with dynamic segmentation (a free connection takes
+half of the largest remaining part), pause and resume (also after a restart), automatic retry,
+direct writing (no temporary files to merge), duplicate-address handling, file names from the server.
 
-1. Open `chrome://extensions`, enable **Developer mode**, click **Load unpacked**, and choose the `extension/` folder.
-2. The settings page opens. Paste the token and click **Test connection**, then **Save**.
-3. Click a `.zip`/`.exe`/`.mp4` link, or any download, and it shows up in the extension popup and at
-   <http://127.0.0.1:7878>.
+**Browser capture**: downloads the browser starts, clicks on file links, right-click "Download with
+Mini IDM", and videos/files spotted on the page (listed in the extension's popup). Your cookies
+(including HttpOnly) go along so logged-in downloads work. Hold **Alt** while clicking to let the
+browser download instead.
 
-Settings (env var, or `~/.mini-idm/config.json`):
+**Menus as in IDM**
+- *Tasks*: Add URL, Add batch download (`img*.jpg` from 1 to 50), Site Grabber, Import/Export list, Exit
+- *File*: Resume, Stop, Download again, Remove, Open, Open folder, Copy address, Properties
+- *Downloads*: Pause all, Stop all, Delete all completed, Find (Ctrl+F), Find next (F3), Scheduler,
+  Start queue ▸, Stop queue ▸, Speed limiter ▸ (on / off / settings), Options
+- *View*: Hide categories, Arrange files by ▸, Toolbar ▸, Columns ▸, tray icon, Theme (dark mode),
+  Font size, Language
+- *Help*: Help, Report a problem, Check for updates, About
 
-| Env | Default |
+**Options (all 9 tabs)**
+
+| Tab | What you can set |
 |---|---|
-| `MINI_IDM_PORT` | `7878` |
-| `MINI_IDM_SAVE_DIR` | `~/Downloads` (base for the default category folders) |
-| `MINI_IDM_HOME` | `~/.mini-idm` (config, token, settings, queue) |
+| General | Start with Windows, clipboard monitoring, which browsers to capture from, the bypass key, the right-click menu, language, theme, extension folder |
+| File types | Types captured automatically (IDM's default list), sites and addresses never to capture |
+| Save to | Categories with their folder and file types, new/edit/delete categories, remember last folder, file date from the server |
+| Downloads | Show Download File Info / progress / complete windows, duplicate-address rule, User-Agent, antivirus scan after download (Microsoft Defender by default) |
+| Connection | Connections per download (1–32), downloads at the same time, per-server exceptions, speed limiter, download limits (X MB every Y hours) |
+| Proxy / Socks | None, Windows settings, automatic script (PAC), or manual HTTP / SOCKS5 with login |
+| Sites and logins | User name and password per site, host, wildcard or path |
+| Retry | Attempts (0 = keep trying) and the wait between them. IDM's dial-up/VPN options aren't needed on modern Windows. |
+| Sounds | Download complete, download failed, queue started, queue finished: built-in tone or your own file |
 
-Everything else (folders, file types, the dialog, downloads at once, connections per download up to 32)
-is in the web UI under **Settings**.
+**Scheduler**: any number of queues; start once or on chosen weekdays at a time, stop at a time,
+N files at once, then do nothing / exit / shut down / sleep; file order inside each queue.
 
-`Ctrl-C` pauses running downloads, and they can be resumed after the next start.
+## Not included
 
-## Capture paths (extension)
+- **Video download buttons and HLS/DASH streams.** That's IDM's most-used extra and the next big step.
+- DRM-protected video (no download manager can legally do this).
+- FTP and MMS, IDM's toolbar button inside web pages, and registration.
+- Firefox: the extension targets Chrome, Edge, Opera, Brave and Vivaldi.
 
-- **Downloads the browser starts.** The URL goes to the server first. The browser download is cancelled
-  only **after** the server accepts it, so if the server is down Chrome keeps the download.
-  `blob:`/`data:` URLs are left alone because they only exist inside the browser.
-- **Link clicks** on file-looking links. The link is sent before the browser requests it, which matters for
-  one-time download links. If the server refuses, the extension starts a normal browser download, so the
-  click is never lost.
-- **Media detection**: response headers (`video/*`, `audio/*`, `Content-Disposition: attachment`, archive
-  types) are watched in the background. Hits are listed in the popup with a **Download** button and are
-  never downloaded automatically. HLS/DASH manifests are listed but not supported yet.
-- **Right-click** → *Download link with Mini IDM* / *Download this media with Mini IDM*.
+## For developers
 
-Cookies come from `chrome.cookies`, including HttpOnly and partitioned cookies, together with the
-referrer and user agent. They are kept in memory only, never written to `queue.json`, and are not sent
-across origins on redirects.
-
-## Security model
-
-A local download server is a juicy target: any website can try to send requests to `127.0.0.1`. So:
-
-- It binds to `127.0.0.1` only.
-- Every `/api` request needs the bearer token, compared in constant time.
-- The `Host` header must be `127.0.0.1:PORT` or `localhost:PORT`, which blocks DNS rebinding.
-- It sends **no CORS headers**. The extension doesn't need them (host permissions), and web pages can't read responses.
-- A request with a foreign `Origin` is rejected even if it has a valid token.
-- POST bodies must be `application/json`, so plain-text "simple" requests are refused.
-- Only `http:`/`https:` URLs are accepted. Forwarded headers are whitelisted to Cookie, Referer, User-Agent and Accept-Language.
-- The web UI has a strict CSP and renders filenames and URLs with `textContent`.
-
-## Tests
-
-```bash
-cd server
-npm test            # 36 tests, ~3 s, no dependencies
-npm run test:e2e    # loads the real extension into Chromium (needs: npm i -D playwright)
+```
+app/            the Windows program (Electron)
+  engine/       download engine: downloader, manager (queues, limits, retries), settings,
+                scheduler, proxy, rules, grabber, batch, browser bridge
+  main/         program shell: windows, tray, start with Windows, IPC, notifications, sounds
+  renderer/     the windows (plain HTML/CSS/JS, strict CSP, no Node access)
+  locales/      en.json, pt-BR.json
+  test/         engine tests (node:test)
+  test-e2e/     drives the real program and extension (Playwright)
+extension/      the browser connector (Manifest V3)
+docs/           screenshots, the original analysis prompt and review
 ```
 
-`npm test` runs a local origin server that misbehaves on purpose: dropped connections, a server that
-says `Accept-Ranges` but ignores Range, 404s, cross-origin redirects, `filename*=` headers, and slow
-streams for pause/resume. The API tests cover token, Origin, Host, content-type and URL-scheme checks,
-concurrency limits, and restart persistence.
+```bash
+cd app
+npm install
+npm start            # run the program
+npm test             # 48 engine tests: segmentation, resume, queues, scheduler, proxies, quota…
+npm run test:e2e     # real program + real extension (needs: npm i -D playwright)
+npm run dist         # Windows installer in app/dist (on Linux this needs Wine)
+```
 
-`npm run test:e2e` checks, in a real browser: click capture with HttpOnly cookie forwarding, the
-browser-download takeover, media detection without auto-download, and the fallback when the server refuses.
+Pushing a tag like `v2.0.1` makes the **Windows build** workflow run the tests on Windows,
+build the installer, and attach it to a GitHub release.
 
-## Limitations
+### How the browser connection is secured
 
-- No HLS/DASH reassembly (needs a manifest parser and ffmpeg for muxing).
-- DRM-protected media (Widevine) cannot be downloaded by this or any download manager design.
-- POST-form downloads are replayed as GET, so downloads that need a form POST fail on the server
-  side (the item shows an error).
-- No scheduler, site grabber, speed limiter or FTP.
-- Firefox: the code is mostly compatible, but it's untested and the manifest needs `browser_specific_settings`.
-- A browser-started download has already made one request before it is taken over, so strict one-time URLs
-  can fail on that path. Click capture avoids this, but with "Ask where to save" on, the dialog's file-info
-  request also uses up a one-time URL. Turn that setting off for sites with one-time links.
-- The folder picker and Open / Open folder use the OS: PowerShell and Explorer on Windows, `osascript`/`open`
-  on macOS, and zenity or kdialog plus `xdg-open` on Linux. Without a picker, type the folder path instead.
-
-## Roadmap
-
-- **Native messaging instead of an open port**: a small Node host (`com.miniidm.host`, stdio, 4-byte
-  length-prefixed JSON) registered in `HKCU\Software\Google\Chrome\NativeMessagingHosts`. This mirrors
-  `IDMMsgHost.exe`. Chrome only lets the listed extension talk to it, which removes the token, and Chrome
-  can start the engine on demand.
-- HLS/DASH: parse `.m3u8`/`.mpd`, download segments in parallel, mux with ffmpeg.
-- Speed limiter (token bucket shared across connections) and a scheduler.
-
-## Docs
-
-- [`docs/PROMPT.md`](docs/PROMPT.md): the analysis and build spec this project follows, including how to
-  analyse IDM itself with proven/inferred/hidden tagging.
-- [`docs/REVIEW.md`](docs/REVIEW.md): what was wrong with the first draft of this project and how each
-  issue was fixed and tested.
+The program listens on `127.0.0.1:7878` only. It accepts requests from the Mini IDM extension
+(recognised by its fixed ID, which browsers put in the `Origin` header and web pages cannot fake)
+or with the token in `%APPDATA%\Mini IDM\config.json`. There are no CORS headers, the `Host` header
+is checked (no DNS rebinding), only JSON is accepted, and forwarded request headers are limited
+to cookies, referrer, user agent and language. Cookies are kept in memory only.

@@ -85,7 +85,8 @@ function defaults(baseDir) {
       columnWidths: {},
       closeToTray: true
     },
-    queues: [defaultQueue('main')]
+    queues: [defaultQueue('main')],
+    grabberProjects: []         // [{ id, name, url, depth, exts, sameSite }]
   };
 }
 
@@ -297,6 +298,20 @@ function merge(current, patch, baseDir) {
     }
     if (!out.some(q => q.id === 'main')) out.unshift(next.queues.find(q => q.id === 'main') || defaultQueue('main'));
     next.queues = out.slice(0, 50);
+  }
+
+  if (Array.isArray(patch.grabberProjects)) {
+    next.grabberProjects = patch.grabberProjects
+      .filter(g => g && typeof g.url === 'string' && /^https?:\/\//i.test(g.url.trim()))
+      .map((g, n) => ({
+        id: typeof g.id === 'string' && /^[\w-]{1,40}$/.test(g.id) ? g.id : `g-${Date.now().toString(36)}${n}`,
+        name: str(g.name, '', 80).trim() || g.url.trim().slice(0, 80),
+        url: g.url.trim().slice(0, 2000),
+        depth: clampInt(g.depth, 0, 3, 1),
+        exts: cleanExts(g.exts),
+        sameSite: bool(g.sameSite, true)
+      }))
+      .slice(0, 100);
   }
   return next;
 }

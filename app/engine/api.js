@@ -26,7 +26,7 @@ const MAX_BODY = 64 * 1024;
  * (result.item) or found to be a duplicate that needs an answer
  * (result.duplicate). The app opens its windows from there.
  */
-function createBridge({ manager, settings, token, extensionIds = [], version = '0.0.0', onCapture = () => {} }) {
+function createBridge({ manager, settings, token, extensionIds = [], version = '0.0.0', onCapture = () => {}, onSeen = () => {} }) {
   const tokenBuf = Buffer.from(token || '');
   const allowedOrigins = new Set(extensionIds.map(id => `chrome-extension://${id}`));
 
@@ -83,6 +83,7 @@ function createBridge({ manager, settings, token, extensionIds = [], version = '
     const decision = captureDecision(s, { url: b.url, filename: b.filename, mime: b.mime, browser: b.browser, kind });
     if (!decision.capture) return send(res, 200, { accepted: false, reason: decision.reason });
 
+    if (typeof b.browser === 'string' && /^[a-z]{2,12}$/.test(b.browser)) onSeen(b.browser);
     const request = {
       url: b.url,
       filename: typeof b.filename === 'string' && b.filename ? b.filename : null,
@@ -113,7 +114,11 @@ function createBridge({ manager, settings, token, extensionIds = [], version = '
 
     const url = new URL(req.url, `http://${req.headers.host}`);
     try {
-      if (req.method === 'GET' && url.pathname === '/api/ping') return send(res, 200, { app: 'mini-idm', version });
+      if (req.method === 'GET' && url.pathname === '/api/ping') {
+        const browser = url.searchParams.get('browser');
+        if (fromExtension && browser && /^[a-z]{2,12}$/.test(browser)) onSeen(browser);
+        return send(res, 200, { app: 'mini-idm', version });
+      }
       if (req.method === 'GET' && url.pathname === '/api/config') {
         const s = settings.get();
         return send(res, 200, {

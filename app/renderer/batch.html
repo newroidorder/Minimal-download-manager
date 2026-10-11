@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:">
+  <title>Mini IDM</title>
+  <link rel="stylesheet" href="common.css">
+  <link rel="stylesheet" href="dialogs.css">
+</head>
+<body class="dialog" data-title="batch.title">
+  <div class="dlg-body col-fill">
+    <h1 class="dlg-title" data-icon="batch"><span data-i18n="batch.title"></span></h1>
+    <p class="hint" data-i18n="batch.intro"></p>
+    <div class="field">
+      <span data-i18n="batch.pattern"></span>
+      <input type="text" id="pattern" spellcheck="false" placeholder="https://example.com/photos/img*.jpg">
+    </div>
+    <div class="cols3">
+      <div class="field"><span data-i18n="batch.from"></span><input type="text" id="from" value="1"></div>
+      <div class="field"><span data-i18n="batch.to"></span><input type="text" id="to" value="10"></div>
+      <div class="field"><span data-i18n="batch.width"></span><input type="number" id="width" value="0" min="0" max="10"></div>
+    </div>
+    <div class="row seg-head"><span class="label" data-i18n="batch.preview"></span><span class="hint" id="count"></span></div>
+    <div class="table-box grow-box"><table class="grid"><tbody id="preview"></tbody></table></div>
+    <p class="error" id="error" hidden></p>
+  </div>
+  <div class="dlg-footer">
+    <label class="check inline"><input type="radio" name="when" value="queue" checked> <span data-i18n="batch.toQueue"></span></label>
+    <select id="queue" class="small-select"></select>
+    <label class="check inline"><input type="radio" name="when" value="now"> <span data-i18n="batch.now"></span></label>
+    <span class="spacer"></span>
+    <button class="btn" id="cancel" data-i18n="common.cancel"></button>
+    <button class="btn primary" id="ok" data-i18n="batch.add"></button>
+  </div>
+  <script type="module" src="batch.js"></script>
+</body>
+</html>

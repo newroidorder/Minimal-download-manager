@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:">
+  <title>Mini IDM</title>
+  <link rel="stylesheet" href="common.css">
+  <link rel="stylesheet" href="dialogs.css">
+</head>
+<body class="dialog" data-title="grab.title">
+  <div class="dlg-body col-fill">
+    <h1 class="dlg-title" data-icon="grabber"><span data-i18n="grab.title"></span></h1>
+    <div class="grab-form">
+      <div class="field grow"><span data-i18n="grab.url"></span><input type="text" id="url" spellcheck="false" placeholder="https://"></div>
+      <div class="field"><span data-i18n="grab.depth"></span>
+        <select id="depth">
+          <option value="0" data-i18n="grab.depth0"></option>
+          <option value="1" data-i18n="grab.depth1"></option>
+          <option value="2" data-i18n="grab.depth2"></option>
+          <option value="3" data-i18n="grab.depth3"></option>
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <span data-i18n="grab.types"></span>
+      <div class="row">
+        <input type="text" id="exts" class="grow mono" spellcheck="false">
+        <button class="btn small" data-preset="images" data-i18n="grab.images"></button>
+        <button class="btn small" data-preset="audio" data-i18n="grab.audio"></button>
+        <button class="btn small" data-preset="video" data-i18n="grab.video"></button>
+        <button class="btn small" data-preset="archives" data-i18n="grab.archives"></button>
+        <button class="btn small" data-preset="documents" data-i18n="grab.documents"></button>
+      </div>
+    </div>
+    <div class="row">
+      <label class="check"><input type="checkbox" id="sameSite" checked> <span data-i18n="grab.sameSite"></span></label>
+      <span class="spacer grow"></span>
+      <span class="hint" id="progress"></span>
+      <button class="btn" id="stop" data-i18n="grab.stop" hidden></button>
+      <button class="btn primary" id="explore" data-icon="search"><span data-i18n="grab.explore"></span></button>
+    </div>
+    <div class="row seg-head gap-top">
+      <label class="check"><input type="checkbox" id="all"> <span class="label" data-i18n="grab.found"></span></label>
+      <input type="search" id="filter" data-i18n-placeholder="grab.filter">
+    </div>
+    <div class="table-box grow-box">
+      <table class="grid">
+        <thead><tr><th></th><th data-i18n="col.name"></th><th data-i18n="grab.type"></th><th data-i18n="grab.page"></th></tr></thead>
+        <tbody id="results"></tbody>
+      </table>
+    </div>
+    <p class="error" id="error" hidden></p>
+  </div>
+  <div class="dlg-footer">
+    <button class="btn" id="saveProject" data-icon="save"><span data-i18n="grab.save"></span></button>
+    <span class="spacer"></span>
+    <label class="check inline"><input type="radio" name="when" value="queue" checked> <span data-i18n="batch.toQueue"></span></label>
+    <select id="queue" class="small-select"></select>
+    <label class="check inline"><input type="radio" name="when" value="now"> <span data-i18n="batch.now"></span></label>
+    <button class="btn primary" id="download" data-icon="download"><span data-i18n="grab.download"></span></button>
+  </div>
+  <script type="module" src="grabber.js"></script>
+</body>
+</html>

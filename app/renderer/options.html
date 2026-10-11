@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:">
+  <title>Mini IDM</title>
+  <link rel="stylesheet" href="common.css">
+  <link rel="stylesheet" href="dialogs.css">
+</head>
+<body class="dialog" data-title="opt.title">
+  <div class="dlg-body split options">
+    <nav class="nav" id="nav">
+      <button data-sec="general" data-icon="options"><span data-i18n="opt.general"></span></button>
+      <button data-sec="types" data-icon="types"><span data-i18n="opt.types"></span></button>
+      <button data-sec="save" data-icon="folder"><span data-i18n="opt.save"></span></button>
+      <button data-sec="downloads" data-icon="download"><span data-i18n="opt.downloads"></span></button>
+      <button data-sec="connection" data-icon="bolt"><span data-i18n="opt.connection"></span></button>
+      <button data-sec="proxy" data-icon="network"><span data-i18n="opt.proxy"></span></button>
+      <button data-sec="sites" data-icon="key"><span data-i18n="opt.sites"></span></button>
+      <button data-sec="retry" data-icon="retry"><span data-i18n="opt.retry"></span></button>
+      <button data-sec="sounds" data-icon="sound"><span data-i18n="opt.sounds"></span></button>
+    </nav>
+
+    <div class="grow sections">
+      <!-- General -->
+      <section data-sec="general">
+        <h2 class="pane-title" data-i18n="opt.general"></h2>
+        <div class="group">
+          <h3 data-i18n="opt.g.system"></h3>
+          <label class="check"><input type="checkbox" data-path="general.startWithWindows"> <span data-i18n="opt.g.autostart"></span></label>
+          <label class="check"><input type="checkbox" data-path="general.monitorClipboard"> <span data-i18n="opt.g.clipboard"></span></label>
+          <label class="check"><input type="checkbox" data-path="ui.closeToTray"> <span data-i18n="opt.g.tray"></span></label>
+          <div class="kv gap-top">
+            <span data-i18n="menu.language"></span>
+            <select data-path="language">
+              <option value="auto" data-i18n="lang.auto"></option>
+              <option value="en" data-i18n="lang.en"></option>
+              <option value="pt-BR" data-i18n="lang.ptBR"></option>
+            </select>
+            <span data-i18n="menu.theme"></span>
+            <select data-path="ui.theme">
+              <option value="system" data-i18n="theme.system"></option>
+              <option value="light" data-i18n="theme.light"></option>
+              <option value="dark" data-i18n="theme.dark"></option>
+            </select>
+          </div>
+        </div>
+        <div class="group">
+          <h3 data-i18n="opt.g.browsers"></h3>
+          <p class="hint" data-i18n="opt.g.browsersHint"></p>
+          <div id="browsers" class="browser-grid"></div>
+          <div class="kv gap-top">
+            <span data-i18n="opt.g.bypass"></span>
+            <select data-path="general.bypassKey">
+              <option value="alt" data-i18n="opt.g.keyAlt"></option>
+              <option value="shift" data-i18n="opt.g.keyShift"></option>
+              <option value="none" data-i18n="opt.g.keyNone"></option>
+            </select>
+          </div>
+          <label class="check gap-top"><input type="checkbox" data-path="general.contextMenu"> <span data-i18n="opt.g.contextMenu"></span></label>
+        </div>
+        <div class="group">
+          <h3 data-i18n="opt.g.extension"></h3>
+          <ol class="steps">
+            <li data-i18n="opt.g.step1"></li>
+            <li data-i18n="opt.g.step2"></li>
+            <li data-i18n="opt.g.step3"></li>
+          </ol>
+          <div class="row">
+            <input type="text" id="extPath" class="grow mono selectable" readonly>
+            <button class="btn" id="extOpen" data-icon="folderOpen"><span data-i18n="opt.g.openFolder"></span></button>
+            <button class="btn" id="extCopy" data-icon="copy"><span data-i18n="opt.g.copy"></span></button>
+          </div>
+          <p class="hint" id="extStatus"></p>
+        </div>
+      </section>
+
+      <!-- File types -->
+      <section data-sec="types" hidden>
+        <h2 class="pane-title" data-i18n="opt.types"></h2>
+        <div class="field">
+          <span data-i18n="opt.t.capture"></span>
+          <textarea data-list="fileTypes.capture" data-upper rows="4" class="mono"></textarea>
+          <div class="list-buttons"><button class="btn small" data-reset="fileTypes.capture" data-i18n="common.default"></button></div>
+        </div>
+        <div class="field">
+          <span data-i18n="opt.t.sites"></span>
+          <textarea data-list="fileTypes.excludeSites" rows="3" class="mono"></textarea>
+          <p class="hint" data-i18n="opt.t.sitesHint"></p>
+          <div class="list-buttons"><button class="btn small" data-reset="fileTypes.excludeSites" data-i18n="common.default"></button></div>
+        </div>
+        <div class="field">
+          <span data-i18n="opt.t.urls"></span>
+          <textarea data-lines="fileTypes.excludeUrls" rows="3" class="mono"></textarea>
+          <p class="hint" data-i18n="opt.t.urlsHint"></p>
+        </div>
+      </section>
+
+      <!-- Save to -->
+      <section data-sec="save" hidden>
+        <h2 class="pane-title" data-i18n="opt.s.title"></h2>
+        <div class="table-box cat-table">
+          <table class="grid">
+            <thead><tr><th data-i18n="opt.s.category"></th><th data-i18n="opt.s.folder"></th><th data-i18n="opt.s.types"></th></tr></thead>
+            <tbody id="cats"></tbody>
+          </table>
+        </div>
+        <div class="list-buttons">
+          <button class="btn small" id="catNew" data-icon="folderPlus"><span data-i18n="opt.s.new"></span></button>
+          <button class="btn small" id="catDelete" data-icon="remove"><span data-i18n="opt.s.delete"></span></button>
+        </div>
+        <div class="group gap-top" id="catEdit">
+          <div class="kv">
+            <span data-i18n="opt.s.name"></span><input type="text" id="catName">
+            <span data-i18n="opt.s.types"></span><input type="text" id="catExts" class="mono">
+            <span data-i18n="opt.s.folder"></span>
+            <div class="row"><input type="text" id="catFolder" class="grow"><button class="btn" id="catBrowse" data-i18n="common.browse"></button></div>
+          </div>
+          <label class="check gap-top"><input type="checkbox" id="catRemember"> <span data-i18n="opt.s.remember"></span></label>
+        </div>
+        <label class="check"><input type="checkbox" data-path="save.setFileDate"> <span data-i18n="opt.s.fileDate"></span></label>
+        <p class="hint" data-i18n="opt.s.noTemp"></p>
+      </section>
+
+      <!-- Downloads -->
+      <section data-sec="downloads" hidden>
+        <h2 class="pane-title" data-i18n="opt.downloads"></h2>
+        <div class="group">
+          <label class="check"><input type="checkbox" data-path="downloads.showFileInfo"> <span data-i18n="opt.d.fileInfo"></span></label>
+          <label class="check"><input type="checkbox" data-path="downloads.showProgress"> <span data-i18n="opt.d.progress"></span></label>
+          <label class="check"><input type="checkbox" data-path="downloads.showComplete"> <span data-i18n="opt.d.complete"></span></label>
+        </div>
+        <div class="group kv">
+          <span data-i18n="opt.d.duplicate"></span>
+          <select data-path="downloads.duplicate">
+            <option value="ask" data-i18n="opt.d.dupAsk"></option>
+            <option value="number" data-i18n="dup.number"></option>
+            <option value="overwrite" data-i18n="dup.overwrite"></option>
+            <option value="resume" data-i18n="dup.resume"></option>
+          </select>
+          <span data-i18n="opt.d.userAgent"></span>
+          <input type="text" data-path="downloads.userAgent" class="mono">
+        </div>
+        <div class="group">
+          <h3 data-i18n="opt.d.antivirus"></h3>
+          <label class="check"><input type="checkbox" data-path="downloads.antivirus.enabled"> <span data-i18n="opt.d.scan"></span></label>
+          <div class="kv gap-top">
+            <span data-i18n="opt.d.program"></span>
+            <div class="row"><input type="text" data-path="downloads.antivirus.program" id="avProgram" class="grow"><button class="btn" id="avBrowse" data-i18n="common.browse"></button></div>
+            <span data-i18n="opt.d.args"></span><input type="text" data-path="downloads.antivirus.args" class="mono">
+          </div>
+          <p class="hint" data-i18n="opt.d.argsHint"></p>
+        </div>
+      </section>
+
+      <!-- Connection -->
+      <section data-sec="connection" hidden>
+        <h2 class="pane-title" data-i18n="opt.connection"></h2>
+        <div class="group kv">
+          <span data-i18n="opt.c.max"></span>
+          <select data-path="connection.maxConnections" data-number>
+            <option>1</option><option>2</option><option>4</option><option>8</option><option>16</option><option>24</option><option>32</option>
+          </select>
+          <span data-i18n="opt.c.active"></span><input type="number" data-path="connection.maxActive" min="1" max="20">
+        </div>
+        <div class="group">
+          <h3 data-i18n="opt.c.exceptions"></h3>
+          <div class="table-box small-table"><table class="grid"><thead><tr><th data-i18n="opt.c.server"></th><th data-i18n="opt.c.number"></th></tr></thead><tbody id="exceptions"></tbody></table></div>
+          <div class="row gap-top-s">
+            <input type="text" id="exHost" class="grow" placeholder="files.example.com">
+            <input type="number" id="exMax" min="1" max="32" value="2">
+            <button class="btn small" id="exAdd" data-i18n="common.add"></button>
+            <button class="btn small" id="exRemove" data-i18n="common.remove"></button>
+          </div>
+        </div>
+        <div class="group">
+          <h3 data-i18n="menu.speedLimiter"></h3>
+          <label class="check"><input type="checkbox" data-path="speedLimit.enabled"> <span data-i18n="opt.c.limit"></span></label>
+          <div class="indent row"><input type="number" data-path="speedLimit.kbps" min="1"> <span data-i18n="dl.kbps"></span></div>
+        </div>
+        <div class="group">
+          <h3 data-i18n="opt.c.quota"></h3>
+          <label class="check"><input type="checkbox" data-path="connection.quota.enabled"> <span data-i18n="opt.c.quotaOn"></span></label>
+          <div class="indent row">
+            <span data-i18n="opt.c.quotaMax"></span><input type="number" data-path="connection.quota.mb" min="1"> <span>MB</span>
+            <span data-i18n="opt.c.quotaEvery"></span><input type="number" data-path="connection.quota.hours" min="1"> <span data-i18n="opt.c.hours"></span>
+          </div>
+          <label class="check indent"><input type="checkbox" data-path="connection.quota.warn"> <span data-i18n="opt.c.quotaWarn"></span></label>
+        </div>
+      </section>
+
+      <!-- Proxy -->
+      <section data-sec="proxy" hidden>
+        <h2 class="pane-title" data-i18n="opt.proxy"></h2>
+        <div class="group">
+          <label class="check"><input type="radio" name="proxyMode" value="none"> <span data-i18n="opt.p.none"></span></label>
+          <label class="check"><input type="radio" name="proxyMode" value="system"> <span data-i18n="opt.p.system"></span></label>
+          <label class="check"><input type="radio" name="proxyMode" value="pac"> <span data-i18n="opt.p.pac"></span></label>
+          <div class="indent"><input type="text" data-path="proxy.pacUrl" class="wide" placeholder="http://intranet/proxy.pac"></div>
+          <label class="check gap-top"><input type="radio" name="proxyMode" value="manual"> <span data-i18n="opt.p.manual"></span></label>
+          <div class="indent kv">
+            <span data-i18n="opt.p.type"></span>
+            <select data-path="proxy.type"><option value="http">HTTP</option><option value="socks5">SOCKS5</option></select>
+            <span data-i18n="opt.p.host"></span><input type="text" data-path="proxy.host" placeholder="proxy.example.com">
+            <span data-i18n="opt.p.port"></span><input type="number" data-path="proxy.port" min="1" max="65535">
+            <span data-i18n="opt.p.user"></span><input type="text" data-path="proxy.user" autocomplete="off">
+            <span data-i18n="opt.p.pass"></span><input type="password" data-path="proxy.pass" autocomplete="off">
+          </div>
+        </div>
+      </section>
+
+      <!-- Sites and logins -->
+      <section data-sec="sites" hidden>
+        <h2 class="pane-title" data-i18n="opt.sites"></h2>
+        <p class="hint" data-i18n="opt.u.hint"></p>
+        <div class="table-box small-table"><table class="grid"><thead><tr><th data-i18n="opt.u.site"></th><th data-i18n="opt.u.user"></th><th data-i18n="opt.u.pass"></th></tr></thead><tbody id="sites"></tbody></table></div>
+        <div class="kv gap-top">
+          <span data-i18n="opt.u.site"></span><input type="text" id="siteSite" placeholder="files.example.com/private/">
+          <span data-i18n="opt.u.user"></span><input type="text" id="siteUser" autocomplete="off">
+          <span data-i18n="opt.u.pass"></span><input type="password" id="sitePass" autocomplete="off">
+        </div>
+        <div class="list-buttons">
+          <button class="btn small" id="siteAdd" data-i18n="opt.u.save"></button>
+          <button class="btn small" id="siteRemove" data-i18n="common.remove"></button>
+        </div>
+      </section>
+
+      <!-- Retry -->
+      <section data-sec="retry" hidden>
+        <h2 class="pane-title" data-i18n="opt.retry"></h2>
+        <div class="group kv">
+          <span data-i18n="opt.r.attempts"></span><input type="number" data-path="retry.attempts" min="0" max="1000">
+          <span data-i18n="opt.r.delay"></span><div class="row"><input type="number" data-path="retry.delay" min="1" max="3600"> <span data-i18n="opt.r.seconds"></span></div>
+        </div>
+        <p class="hint" data-i18n="opt.r.hint"></p>
+      </section>
+
+      <!-- Sounds -->
+      <section data-sec="sounds" hidden>
+        <h2 class="pane-title" data-i18n="opt.sounds"></h2>
+        <p class="hint" data-i18n="opt.o.hint"></p>
+        <div class="table-box">
+          <table class="grid">
+            <thead><tr><th data-i18n="opt.o.event"></th><th data-i18n="opt.o.file"></th><th></th></tr></thead>
+            <tbody id="sounds"></tbody>
+          </table>
+        </div>
+      </section>
+      <p class="error" id="error" hidden></p>
+    </div>
+  </div>
+  <div class="dlg-footer">
+    <span class="spacer"></span>
+    <button class="btn" id="cancel" data-i18n="common.cancel"></button>
+    <button class="btn primary" id="ok" data-i18n="common.ok"></button>
+  </div>
+  <script type="module" src="options.js"></script>
+</body>
+</html>

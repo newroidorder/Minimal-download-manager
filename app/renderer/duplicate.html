@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:">
+  <title>Mini IDM</title>
+  <link rel="stylesheet" href="common.css">
+  <link rel="stylesheet" href="dialogs.css">
+</head>
+<body class="dialog" data-title="dup.title">
+  <div class="dlg-body">
+    <h1 class="dlg-title" data-icon="alert"><span data-i18n="dup.title"></span></h1>
+    <p data-i18n="dup.text"></p>
+    <p class="name" id="name"></p>
+    <p class="url" id="url"></p>
+    <div class="gap-top">
+      <label class="check"><input type="radio" name="act" value="number" checked> <span data-i18n="dup.number"></span></label>
+      <label class="check"><input type="radio" name="act" value="overwrite"> <span data-i18n="dup.overwrite"></span></label>
+      <label class="check"><input type="radio" name="act" value="resume"> <span data-i18n="dup.resume"></span></label>
+    </div>
+    <label class="check gap-top"><input type="checkbox" id="remember"> <span data-i18n="dup.remember"></span></label>
+  </div>
+  <div class="dlg-footer">
+    <span class="spacer"></span>
+    <button class="btn" id="cancel" data-i18n="common.cancel"></button>
+    <button class="btn primary" id="ok" data-i18n="common.ok"></button>
+  </div>
+  <script type="module" src="duplicate.js"></script>
+</body>
+</html>

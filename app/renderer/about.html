@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:">
+  <title>Mini IDM</title>
+  <link rel="stylesheet" href="common.css">
+  <link rel="stylesheet" href="dialogs.css">
+</head>
+<body class="dialog about" data-title="about.title">
+  <div class="dlg-body about-body">
+    <img src="logo.svg" alt="" class="about-logo">
+    <h1>Mini IDM</h1>
+    <p class="muted" id="version"></p>
+    <p data-i18n="about.text"></p>
+    <p class="hint" data-i18n="about.credits"></p>
+    <div class="row about-links">
+      <button class="btn" data-link="home" data-icon="external"><span data-i18n="about.site"></span></button>
+      <button class="btn" data-link="issues" data-icon="external"><span data-i18n="menu.reportProblem"></span></button>
+    </div>
+  </div>
+  <div class="dlg-footer"><button class="btn primary" id="close" data-i18n="common.close"></button></div>
+  <script type="module" src="about.js"></script>
+</body>
+</html>

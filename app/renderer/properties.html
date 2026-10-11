@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:">
+  <title>Mini IDM</title>
+  <link rel="stylesheet" href="common.css">
+  <link rel="stylesheet" href="dialogs.css">
+</head>
+<body class="dialog" data-title="prop.title">
+  <div class="dlg-body">
+    <div class="complete-file">
+      <span id="icon"></span>
+      <div><p class="name" id="name"></p><p class="hint" id="sub"></p></div>
+    </div>
+    <dl class="stats">
+      <dt data-i18n="prop.status"></dt><dd id="status"></dd>
+      <dt data-i18n="prop.size"></dt><dd id="size"></dd>
+      <dt data-i18n="prop.category"></dt><dd id="category"></dd>
+      <dt data-i18n="prop.savedTo"></dt><dd id="path" class="path selectable"></dd>
+      <dt data-i18n="prop.referrer"></dt><dd id="referrer" class="path selectable"></dd>
+      <dt data-i18n="prop.added"></dt><dd id="added"></dd>
+      <dt data-i18n="prop.lastTry"></dt><dd id="lastTry"></dd>
+      <dt data-i18n="prop.finished"></dt><dd id="finished"></dd>
+      <dt data-i18n="prop.scan" id="scanLabel"></dt><dd id="scan"></dd>
+    </dl>
+    <div class="field">
+      <span data-i18n="prop.url"></span>
+      <input type="text" id="url" spellcheck="false">
+      <p class="hint" id="urlHint" data-i18n="prop.urlHint"></p>
+    </div>
+    <div class="field">
+      <span data-i18n="prop.description"></span>
+      <input type="text" id="description">
+    </div>
+    <p class="error" id="error" hidden></p>
+  </div>
+  <div class="dlg-footer">
+    <button class="btn" id="open" data-icon="file"><span data-i18n="dl.open"></span></button>
+    <button class="btn" id="folder" data-icon="folderOpen"><span data-i18n="dl.openFolder"></span></button>
+    <span class="spacer"></span>
+    <button class="btn" id="cancel" data-i18n="common.close"></button>
+    <button class="btn primary" id="save" data-i18n="common.save"></button>
+  </div>
+  <script type="module" src="properties.js"></script>
+</body>
+</html>

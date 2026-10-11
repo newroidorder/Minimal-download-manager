@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:">
+  <title>Mini IDM</title>
+  <link rel="stylesheet" href="common.css">
+  <link rel="stylesheet" href="dialogs.css">
+</head>
+<body class="dialog">
+  <!-- 1. Download File Info -->
+  <section id="ask" class="view" hidden>
+    <div class="dlg-body">
+      <h1 class="dlg-title" data-icon="download"><span data-i18n="dl.infoTitle"></span></h1>
+      <div class="field">
+        <span data-i18n="dl.url"></span>
+        <input type="text" id="askUrl" readonly class="selectable">
+      </div>
+      <div class="cols2">
+        <div class="field">
+          <span data-i18n="dl.category"></span>
+          <select id="category"></select>
+        </div>
+        <div class="field">
+          <span data-i18n="dl.saveAs"></span>
+          <input type="text" id="filename" autocomplete="off" spellcheck="false">
+        </div>
+      </div>
+      <div class="field">
+        <span data-i18n="dl.folder"></span>
+        <div class="row">
+          <input type="text" id="folder" class="grow" autocomplete="off" spellcheck="false">
+          <button class="btn" id="browse" data-icon="folderOpen"><span data-i18n="common.browse"></span></button>
+        </div>
+        <label class="check"><input type="checkbox" id="remember"> <span id="rememberLabel"></span></label>
+      </div>
+      <div class="field">
+        <span data-i18n="dl.description"></span>
+        <input type="text" id="description" autocomplete="off">
+      </div>
+      <p class="info-line" id="askInfo"></p>
+      <p class="error" id="askError" hidden></p>
+    </div>
+    <div class="dlg-footer">
+      <button class="btn" id="later" data-icon="queues"><span data-i18n="dl.later"></span></button>
+      <select id="laterQueue" class="small-select" data-i18n-title="dl.laterQueue"></select>
+      <span class="spacer"></span>
+      <button class="btn" id="cancelAsk" data-i18n="common.cancel"></button>
+      <button class="btn primary" id="start" data-icon="download"><span data-i18n="dl.start"></span></button>
+    </div>
+  </section>
+
+  <!-- 2. Progress -->
+  <section id="progress" class="view" hidden>
+    <div class="dlg-body">
+      <div class="tabs" role="tablist">
+        <button class="on" data-tab="status" data-i18n="dl.tabStatus"></button>
+        <button data-tab="limiter" data-i18n="dl.tabLimiter"></button>
+      </div>
+      <div data-pane="status">
+        <p class="name" id="progName"></p>
+        <p class="url" id="progUrl"></p>
+        <div class="bar big"><div id="progFill"></div></div>
+        <dl class="stats">
+          <dt data-i18n="dl.status"></dt><dd id="progStatus"></dd>
+          <dt data-i18n="dl.size"></dt><dd id="progSize"></dd>
+          <dt data-i18n="dl.downloaded"></dt><dd id="progDone"></dd>
+          <dt data-i18n="dl.rate"></dt><dd id="progSpeed"></dd>
+          <dt data-i18n="dl.timeLeft"></dt><dd id="progEta"></dd>
+          <dt data-i18n="dl.resumable"></dt><dd id="progResume"></dd>
+        </dl>
+        <div class="seg-head">
+          <span class="hint" data-i18n="dl.segments"></span>
+          <span class="hint" id="progConns"></span>
+        </div>
+        <canvas id="segments" height="16"></canvas>
+        <p class="error" id="progError" hidden></p>
+      </div>
+      <div data-pane="limiter" hidden>
+        <label class="check"><input type="checkbox" id="limOn"> <span data-i18n="dl.useLimiter"></span></label>
+        <div class="row indent">
+          <input type="number" id="limKbps" min="1"> <span data-i18n="dl.kbps"></span>
+          <button class="btn small" id="limApply" data-i18n="common.apply"></button>
+        </div>
+        <p class="hint indent" data-i18n="dl.limiterHint"></p>
+        <label class="check gap-top"><input type="checkbox" id="showComplete"> <span data-i18n="dl.showCompleteOpt"></span></label>
+      </div>
+    </div>
+    <div class="dlg-footer">
+      <button class="btn" id="hide" data-i18n="dl.hide"></button>
+      <span class="spacer"></span>
+      <button class="btn" id="pauseResume"></button>
+      <button class="btn" id="cancelDl" data-i18n="common.cancel"></button>
+    </div>
+  </section>
+
+  <!-- 3. Download complete -->
+  <section id="complete" class="view" hidden>
+    <div class="dlg-body">
+      <h1 class="dlg-title done-title" data-icon="finished"><span data-i18n="dl.completeTitle"></span></h1>
+      <div class="complete-file">
+        <span id="doneIcon"></span>
+        <div>
+          <p class="name" id="doneName"></p>
+          <p class="hint" id="doneSize"></p>
+        </div>
+      </div>
+      <dl class="stats">
+        <dt data-i18n="dl.savedTo"></dt><dd id="donePath" class="path selectable"></dd>
+        <dt data-i18n="dl.url"></dt><dd id="doneUrl" class="path selectable"></dd>
+        <dt data-i18n="dl.scan" id="doneScanLabel"></dt><dd id="doneScan"></dd>
+      </dl>
+      <label class="check"><input type="checkbox" id="dontShow"> <span data-i18n="dl.dontShowComplete"></span></label>
+      <p class="error" id="doneError" hidden></p>
+    </div>
+    <div class="dlg-footer">
+      <span class="spacer"></span>
+      <button class="btn primary" id="openFile" data-icon="file"><span data-i18n="dl.open"></span></button>
+      <button class="btn" id="openFolder" data-icon="folderOpen"><span data-i18n="dl.openFolder"></span></button>
+      <button class="btn" id="closeDone" data-i18n="common.close"></button>
+    </div>
+  </section>
+
+  <section id="gone" class="view" hidden>
+    <div class="dlg-body">
+      <h1 class="dlg-title" data-icon="alert"><span data-i18n="dl.goneTitle"></span></h1>
+      <p class="muted" data-i18n="dl.gone"></p>
+    </div>
+    <div class="dlg-footer"><button class="btn" id="closeGone" data-i18n="common.close"></button></div>
+  </section>
+
+  <script type="module" src="download.js"></script>
+</body>
+</html>

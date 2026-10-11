@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:">
+  <title>Mini IDM</title>
+  <link rel="stylesheet" href="common.css">
+  <link rel="stylesheet" href="dialogs.css">
+</head>
+<body class="dialog" data-title="add.title">
+  <form class="dlg-body" id="form">
+    <h1 class="dlg-title" data-icon="add"><span data-i18n="add.title"></span></h1>
+    <div class="field">
+      <span data-i18n="add.url"></span>
+      <input type="text" id="url" autocomplete="off" spellcheck="false" placeholder="https://">
+    </div>
+    <label class="check"><input type="checkbox" id="useAuth"> <span data-i18n="add.useAuth"></span></label>
+    <div class="cols2 indent" id="auth" hidden>
+      <div class="field"><span data-i18n="add.user"></span><input type="text" id="user" autocomplete="off"></div>
+      <div class="field"><span data-i18n="add.pass"></span><input type="password" id="pass" autocomplete="off"></div>
+    </div>
+    <p class="error" id="error" hidden></p>
+  </form>
+  <div class="dlg-footer">
+    <span class="spacer"></span>
+    <button class="btn" id="cancel" data-i18n="common.cancel"></button>
+    <button class="btn primary" id="ok" data-i18n="common.ok"></button>
+  </div>
+  <script type="module" src="add.js"></script>
+</body>
+</html>

@@ -7,27 +7,36 @@
 // 4. Media and files seen in page traffic (webRequest, observe only), listed
 //    in the popup and never downloaded automatically.
 
-import { server, ping, refreshConfig, capture, detectedKey } from './lib.js';
+import { server, ping, refreshConfig, capture, detectedKey, keepConnected, onConfig } from './lib.js';
 
 // ---------- startup ----------
 
 async function setup() {
   await ping();
-  const config = await refreshConfig();
-  await chrome.contextMenus.removeAll();
-  if (config?.contextMenu !== false) {
-    chrome.contextMenus.create({ id: 'mini-idm-link', title: chrome.i18n.getUILanguage().startsWith('pt') ? 'Baixar com o Minimal Download Manager' : 'Download with Minimal Download Manager', contexts: ['link'] });
-    chrome.contextMenus.create({ id: 'mini-idm-media', title: chrome.i18n.getUILanguage().startsWith('pt') ? 'Baixar esta mídia com o Minimal Download Manager' : 'Download this media with Minimal Download Manager', contexts: ['video', 'audio'] });
-  }
+  menus(await refreshConfig());
+}
+
+// One rebuild at a time, or two would both create the same menu IDs.
+let menuChain = Promise.resolve();
+function menus(config) {
+  menuChain = menuChain.then(async () => {
+    await chrome.contextMenus.removeAll();
+    if (config?.contextMenu === false) return;
+    const pt = chrome.i18n.getUILanguage().startsWith('pt');
+    await chrome.contextMenus.create({ id: 'mini-idm-link', title: pt ? 'Baixar com o Minimal Download Manager' : 'Download with Minimal Download Manager', contexts: ['link'] });
+    await chrome.contextMenus.create({ id: 'mini-idm-media', title: pt ? 'Baixar esta mídia com o Minimal Download Manager' : 'Download this media with Minimal Download Manager', contexts: ['video', 'audio'] });
+  }).catch(() => {});
+  return menuChain;
 }
 chrome.runtime.onInstalled.addListener(setup);
 chrome.runtime.onStartup.addListener(setup);
 setup(); // each time the service worker wakes up
-// The program's settings can change; pick them up every few minutes.
-chrome.alarms?.create('refresh', { periodInMinutes: 2 });
-// A short hello every 30 s keeps "Connected" showing in the program's status bar.
+// The program sends its settings when they change. The connection stays open
+// while the browser runs; the alarm reopens it if the browser closed it.
+onConfig(menus);
+chrome.alarms?.create('refresh', { periodInMinutes: 5 });
 chrome.alarms?.create('ping', { periodInMinutes: 0.5 });
-chrome.alarms?.onAlarm.addListener((a) => { if (a.name === 'refresh') setup(); else if (a.name === 'ping') ping(); });
+chrome.alarms?.onAlarm.addListener((a) => { if (a.name === 'refresh') setup(); else if (a.name === 'ping') { keepConnected(); ping(); } });
 
 // ---------- 1. Browser-initiated downloads ----------
 
@@ -67,9 +76,21 @@ async function sendOrFallback({ url, filename, referrer, kind }) {
 }
 
 chrome.runtime.onMessage.addListener((msg, sender, reply) => {
+  if (sender.id !== chrome.runtime.id) return;
   if (msg?.type === 'click' && sender.tab) {
     sendOrFallback({ url: msg.url, filename: msg.filename, referrer: msg.referrer, kind: 'click' }).then(reply);
     return true; // async reply
+  }
+  // From the popup only, not from content scripts running inside web pages.
+  if (sender.tab || sender.url !== chrome.runtime.getURL('popup.html')) return;
+  if (msg?.type === 'popup-status') {
+    ping().then(reply);
+    return true;
+  }
+  if (msg?.type === 'popup-download' && typeof msg.url === 'string' && /^https?:/i.test(msg.url)) {
+    capture({ url: msg.url, filename: msg.filename, referrer: msg.referrer, kind: 'detected' })
+      .then(accepted => reply({ accepted }), e => reply({ error: e.message }));
+    return true;
   }
 });
 

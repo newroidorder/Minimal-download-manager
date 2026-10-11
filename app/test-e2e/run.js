@@ -45,12 +45,18 @@ async function shot(page, name) {
   const downloads = path.join(home, 'Downloads');
   const port = await freePort();
   fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify({ port, token: 'e2e-token' }));
+  // The browser finds the native messaging host in its profile or its config
+  // folder (which one depends on the build); the program registers it in all.
+  const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'mini-idm-profile-'));
+  const xdg = fs.mkdtempSync(path.join(os.tmpdir(), 'mini-idm-xdg-'));
+  const nativeDirs = [path.join(profile, 'NativeMessagingHosts'),
+    ...['chromium', 'google-chrome-for-testing', 'google-chrome'].map(d => path.join(xdg, d, 'NativeMessagingHosts'))];
   fs.writeFileSync(path.join(home, 'settings.json'), JSON.stringify({ version: 2, language: LANG, ui: { theme: THEME } }));
 
   const app = await pw._electron.launch({
     executablePath: require(path.join(APP, 'node_modules', 'electron')),
     args: [APP, ...(process.getuid?.() === 0 ? ['--no-sandbox'] : [])],
-    env: { ...process.env, MINI_IDM_HOME: home, MINI_IDM_SAVE_DIR: downloads, ELECTRON_DISABLE_SECURITY_WARNINGS: '1' }
+    env: { ...process.env, MINI_IDM_HOME: home, MINI_IDM_SAVE_DIR: downloads, MINI_IDM_NATIVE_DIRS: nativeDirs.join(path.delimiter), ELECTRON_DISABLE_SECURITY_WARNINGS: '1' }
   });
   const errors = [];
   const watch = (p) => {
@@ -230,21 +236,19 @@ async function shot(page, name) {
     });
 
     await check('browser extension: a link click opens the program\'s dialog; cookies are forwarded', async () => {
-      context = await pw.chromium.launchPersistentContext(fs.mkdtempSync(path.join(os.tmpdir(), 'mini-idm-profile-')), {
-        channel: 'chromium', headless: true,
+      await waitFor(() => fs.existsSync(path.join(nativeDirs[0], 'com.minimaldm.bridge.json')), 10_000, 'native host registered');
+      context = await pw.chromium.launchPersistentContext(profile, {
+        channel: 'chromium', headless: true, env: { ...process.env, XDG_CONFIG_HOME: xdg },
         args: [`--disable-extensions-except=${EXTENSION}`, `--load-extension=${EXTENSION}`]
       });
       const isOurs = (w) => w.url().startsWith('chrome-extension://') && w.url().endsWith('/background.js');
       const sw = context.serviceWorkers().find(isOurs) || await context.waitForEvent('serviceworker', { predicate: isOurs });
       await waitFor(() => sw.evaluate(() => !!globalThis.chrome?.storage?.local).catch(() => false), 10_000, 'extension APIs');
       assert.equal(new URL(sw.url()).host, 'jblggonfekdkfbcfpjfnemnhbofnhfki', 'the fixed extension ID');
-      await sw.evaluate(async (p) => { await chrome.storage.local.set({ server: `http://127.0.0.1:${p}` }); }, port);
-      // re-run setup so the config is fetched from the program on this port
-      await sw.evaluate(async (p) => {
-        const r = await fetch(`http://127.0.0.1:${p}/api/config`);
-        await chrome.storage.local.set({ config: await r.json() });
-        await fetch(`http://127.0.0.1:${p}/api/ping?browser=chrome`);
-      }, port);
+      // No setup: the extension starts the native host, which finds the program.
+      await waitFor(async () => (await ipc('bridge')).live?.chrome, 20_000, 'browser connected through native messaging');
+      await waitFor(() => sw.evaluate(() => chrome.storage.local.get('config').then(r => Array.isArray(r.config?.captureExts))), 10_000, 'config from the program');
+      await assert.rejects(fetch(`http://127.0.0.1:${port}/api/ping`), 'port 7878 (here: a test port) stays closed');
       const page = await context.newPage();
       await page.goto(`${origin.base}/page.html`);
       await page.waitForTimeout(300);
@@ -265,7 +269,7 @@ async function shot(page, name) {
       assert.ok(origin.stats.cookies.includes('sid=httponly-secret'), `cookies seen: ${origin.stats.cookies}`);
       await clickClosing(dl, '#closeDone');
       const st = await ipc('bridge');
-      assert.ok(st.seen.chrome, 'the program knows the browser is connected');
+      assert.ok(st.live.chrome && st.seen.chrome, 'the program knows the browser is connected');
       await main.waitForFunction(() => document.getElementById('stBridge').classList.contains('good'), null, { timeout: 20_000 });
       assert.match(await main.textContent('#stBridge'), /Connected: Google Chrome/, 'the status bar says so');
     });

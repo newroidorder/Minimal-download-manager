@@ -142,7 +142,12 @@ test('manager', async (t) => {
   });
 
   await t.test('site logins and the default user agent are sent', async () => {
-    const { m, status } = make({ settings: { sites: [{ site: '127.0.0.1', user: 'me', pass: 'secret' }] } });
+    const plain = make({ settings: { sites: [{ site: '127.0.0.1', user: 'me', pass: 'secret' }] } });
+    const refused = plain.m.add({ url: U('/needs-auth'), filename: 'refused.txt' }).item;
+    await plain.status(refused.id, 'error');
+    assert.equal(origin.stats.auth.at(-1), null, 'a login saved without http:// is never sent over plain HTTP');
+
+    const { m, status } = make({ settings: { sites: [{ site: 'http://127.0.0.1', user: 'me', pass: 'secret' }] } });
     const { item } = m.add({ url: U('/needs-auth'), filename: 'private.txt' });
     const done = await status(item.id, 'done');
     assert.equal(fs.readFileSync(done.dest, 'utf8'), 'private');

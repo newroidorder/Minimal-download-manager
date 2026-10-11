@@ -52,11 +52,18 @@ function captureDecision(settings, { url, filename, mime, browser, kind }) {
 }
 
 // Sites & users: "example.com", "*.example.com" or "example.com/private/".
+// A saved login is only sent over HTTPS, so it can't be read on the way.
+// The one exception is a site the user entered as "http://..." on purpose
+// (an old router or NAS on the local network).
 function credentialsFor(sites, url) {
   let u;
   try { u = new URL(url); } catch { return null; }
+  if (u.protocol !== 'https:' && u.protocol !== 'http:') return null;
   let best = null;
   for (const s of sites) {
+    const plainHttp = /^http:\/\//i.test(s.site);
+    if (u.protocol === 'http:' && !plainHttp) continue;
+    if (u.protocol === 'https:' && plainHttp) continue;
     const raw = s.site.replace(/^https?:\/\//i, '');
     const slash = raw.indexOf('/');
     const host = slash >= 0 ? raw.slice(0, slash) : raw;

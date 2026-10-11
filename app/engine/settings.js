@@ -44,7 +44,9 @@ function defaults(baseDir) {
       monitorClipboard: true,
       browsers: Object.fromEntries(BROWSERS.map(b => [b, true])),
       contextMenu: true,
-      bypassKey: 'alt'          // hold this key while clicking to let the browser download
+      bypassKey: 'alt',         // hold this key while clicking to let the browser download
+      sendCookies: true,        // the extension sends the site's cookies with captured downloads
+      allowHttpBridge: false    // old 127.0.0.1:7878 connection, only for extensions without native messaging
     },
     fileTypes: { capture: [...CAPTURE_EXTS], excludeSites: [...EXCLUDE_SITES], excludeUrls: [] },
     save: {
@@ -143,6 +145,8 @@ function merge(current, patch, baseDir) {
     next.general.monitorClipboard = bool(g.monitorClipboard, next.general.monitorClipboard);
     next.general.contextMenu = bool(g.contextMenu, next.general.contextMenu);
     next.general.bypassKey = oneOf(g.bypassKey, ['alt', 'shift', 'none'], next.general.bypassKey);
+    next.general.sendCookies = bool(g.sendCookies, next.general.sendCookies);
+    next.general.allowHttpBridge = bool(g.allowHttpBridge, next.general.allowHttpBridge);
     if (g.browsers && typeof g.browsers === 'object') {
       for (const b of BROWSERS) next.general.browsers[b] = bool(g.browsers[b], next.general.browsers[b]);
     }
@@ -341,16 +345,55 @@ function categorize(settings, filename, mime = '') {
   return cats.find(c => c.id === byMime) || cats.find(c => c.id === 'general');
 }
 
+// Saved passwords (Sites and logins, proxy) are written encrypted when the
+// program gives us a cipher (Windows DPAPI through Electron's safeStorage):
+// "enc:<base64>". They are only ever plain text in memory.
+const ENC = 'enc:';
+
+function mapSecrets(value, fn) {
+  const out = structuredClone(value);
+  if (out?.proxy && typeof out.proxy.pass === 'string') out.proxy.pass = fn(out.proxy.pass);
+  if (Array.isArray(out?.sites)) for (const s of out.sites) if (s && typeof s.pass === 'string') s.pass = fn(s.pass);
+  return out;
+}
+
 class Settings {
-  constructor(file, baseDir, overrides) {
+  /**
+   * cipher: { encrypt(text) -> base64, decrypt(base64) -> text }, optional.
+   * Without one, passwords are kept as they are (tests, platforms without a keyring).
+   */
+  constructor(file, baseDir, overrides, { cipher = null } = {}) {
     this.file = file;
     this.baseDir = baseDir;
+    this.cipher = cipher;
     this.listeners = new Set();
     let saved = null;
     try { saved = JSON.parse(fs.readFileSync(file, 'utf8')); } catch { /* first run */ }
+    let plaintextOnDisk = false;
+    if (saved) {
+      saved = mapSecrets(saved, (v) => {
+        if (!v.startsWith(ENC)) { if (v) plaintextOnDisk = true; return v; }
+        try { return cipher ? cipher.decrypt(v.slice(ENC.length)) : ''; } catch { return ''; } // other user or machine: re-enter
+      });
+    }
     this.value = defaults(baseDir);
     try { this.value = merge(this.value, migrate(saved), baseDir); } catch { /* keep defaults on bad data */ }
     if (overrides) this.value = merge(this.value, overrides, baseDir);
+    if (plaintextOnDisk && cipher && file) {
+      try { this.save(); } catch { /* read-only folder: try again on the next change */ }
+    }
+  }
+
+  // What goes to disk: the settings with passwords encrypted.
+  serialize() {
+    const value = this.cipher ? mapSecrets(this.value, v => (v ? ENC + this.cipher.encrypt(v) : v)) : this.value;
+    return JSON.stringify(value, null, 2);
+  }
+
+  save() {
+    const tmp = `${this.file}.${process.pid}.tmp`;
+    fs.writeFileSync(tmp, this.serialize(), { mode: 0o600 });
+    fs.renameSync(tmp, this.file);
   }
 
   get() {
@@ -359,11 +402,7 @@ class Settings {
 
   update(patch) {
     this.value = merge(this.value, patch, this.baseDir);
-    if (this.file) {
-      const tmp = `${this.file}.${process.pid}.tmp`;
-      fs.writeFileSync(tmp, JSON.stringify(this.value, null, 2));
-      fs.renameSync(tmp, this.file);
-    }
+    if (this.file) this.save();
     const v = this.get();
     for (const fn of this.listeners) fn(v);
     return v;

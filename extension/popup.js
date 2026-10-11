@@ -1,5 +1,12 @@
 // Popup: is Minimal Download Manager running, plus the videos and files found on this page.
-import { ping, capture, fmtBytes, detectedKey } from './lib.js';
+// The connection to the program lives in the service worker; ask it.
+import { fmtBytes, detectedKey } from './lib.js';
+
+const ping = () => chrome.runtime.sendMessage({ type: 'popup-status' }).catch(() => null);
+const capture = (d) => chrome.runtime.sendMessage({ type: 'popup-download', ...d }).then((r) => {
+  if (r?.error) throw new Error(r.error);
+  return r?.accepted === true;
+});
 
 const pt = chrome.i18n.getUILanguage().startsWith('pt');
 const T = pt ? {

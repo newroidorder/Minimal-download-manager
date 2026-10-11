@@ -1,9 +1,9 @@
 'use strict';
 
 // Minimal Download Manager: the Windows program. It owns the download engine, the windows,
-// the tray icon, and the local bridge the browser extension talks to.
+// the tray icon, and the bridge the browser extension talks to.
 
-const { app, protocol, net, Tray, Menu, nativeImage, nativeTheme, Notification, dialog, shell, session, powerSaveBlocker } = require('electron');
+const { app, protocol, net, Tray, Menu, nativeImage, nativeTheme, Notification, dialog, shell, session, powerSaveBlocker, safeStorage } = require('electron');
 const fs = require('fs');
 const path = require('path');
 const { pathToFileURL } = require('url');
@@ -20,6 +20,8 @@ const windows = require('./windows');
 const system = require('./system');
 const i18n = require('./i18n');
 const { registerIpc } = require('./ipc');
+const { installNativeHost } = require('./native');
+const { pipePath } = require('../native/protocol');
 
 const ROOT = path.join(__dirname, '..');
 const RENDERER = path.join(ROOT, 'renderer');
@@ -43,13 +45,29 @@ if (!app.requestSingleInstanceLock()) {
 const ctx = {
   settings: null, manager: null, scheduler: null, bridge: null, tray: null,
   t: (k) => k, lang: 'en',
-  bridgeState: { listening: false, port: 0, error: null, seen: {} },
+  // listening: the private pipe for the native messaging host. http: the
+  // optional 127.0.0.1 connection (port, error). live: browsers connected now.
+  bridgeState: { listening: false, error: null, http: { enabled: false, listening: false, port: 0, error: null }, seen: {}, live: {} },
   pendingDuplicates: new Map(),
   quitting: false
 };
 
 function extensionDir() {
   return app.isPackaged ? path.join(process.resourcesPath, 'extension') : path.join(ROOT, '..', 'extension');
+}
+
+// Saved passwords are encrypted with Windows DPAPI (safeStorage): only this
+// Windows user on this PC can read them. On Linux without a keyring safeStorage
+// falls back to a fixed key, which protects nothing, so it isn't used there.
+function passwordCipher() {
+  try {
+    if (!safeStorage.isEncryptionAvailable()) return null;
+    if (process.platform === 'linux' && safeStorage.getSelectedStorageBackend?.() === 'basic_text') return null;
+  } catch { return null; }
+  return {
+    encrypt: (text) => safeStorage.encryptString(text).toString('base64'),
+    decrypt: (b64) => safeStorage.decryptString(Buffer.from(b64, 'base64'))
+  };
 }
 
 async function start() {
@@ -63,7 +81,7 @@ async function start() {
   const home = app.getPath('userData');
   if (!process.env.MINI_IDM_HOME) migrateOldData(home);
   const base = process.env.MINI_IDM_SAVE_DIR || app.getPath('downloads');
-  const settings = new Settings(path.join(home, 'settings.json'), base);
+  const settings = new Settings(path.join(home, 'settings.json'), base, null, { cipher: passwordCipher() });
   ctx.settings = settings;
   applyLanguage();
   nativeTheme.themeSource = settings.value.ui.theme;
@@ -82,16 +100,18 @@ async function start() {
   windows.get('main').on('close', onMainClose);
 
   const config = loadConfig(home);
+  const seen = (browser) => {
+    const fresh = !ctx.bridgeState.seen[browser] || Date.now() - ctx.bridgeState.seen[browser] > 60_000;
+    ctx.bridgeState.seen[browser] = Date.now();
+    if (fresh) windows.broadcast('bridge', ctx.bridgeState); // show "Connected" right away
+  };
   ctx.bridge = createBridge({
     manager, settings, token: config.token, extensionIds: [EXTENSION_ID], version: app.getVersion(),
     onCapture: (result, request) => handleResult(result, request),
-    onSeen: (browser) => {
-      const fresh = !ctx.bridgeState.seen[browser] || Date.now() - ctx.bridgeState.seen[browser] > 60_000;
-      ctx.bridgeState.seen[browser] = Date.now();
-      if (fresh) windows.broadcast('bridge', ctx.bridgeState); // show "Connected" right away
-    }
+    onSeen: seen,
+    onConnections: (live) => { ctx.bridgeState.live = live; windows.broadcast('bridge', ctx.bridgeState); }
   });
-  listenBridge(config.port);
+  startBridge(home, config);
 
   system.watchClipboard(
     () => settings.value.general.monitorClipboard,
@@ -116,19 +136,54 @@ function migrateOldData(home) {
   }
 }
 
-function listenBridge(port) {
+// The browser connection: native messaging over a private pipe, plus the old
+// 127.0.0.1 HTTP connection only when switched on in Options > General.
+function startBridge(home, config) {
+  const pipe = pipePath(home);
+  ctx.bridge.listenPipe(pipe).then(() => {
+    ctx.bridgeState.listening = true;
+    windows.broadcast('bridge', ctx.bridgeState);
+  }, (err) => {
+    ctx.bridgeState.error = err.message;
+    windows.broadcast('bridge', ctx.bridgeState);
+  });
+  installNativeHost({
+    home, pipe, extensionId: EXTENSION_ID,
+    exe: process.execPath,
+    script: app.isPackaged ? path.join(process.resourcesPath, 'native', 'host.js') : path.join(ROOT, 'native', 'host.js'),
+    extraDirs: (process.env.MINI_IDM_NATIVE_DIRS || '').split(path.delimiter).filter(Boolean)
+  }).catch((err) => { ctx.bridgeState.error = `native host: ${err.message}`; });
+
+  const syncHttp = () => {
+    const want = ctx.settings.value.general.allowHttpBridge;
+    const h = ctx.bridgeState.http;
+    if (want === h.enabled) return;
+    h.enabled = want;
+    clearTimeout(httpRetry);
+    if (want) listenHttp(config.port);
+    else ctx.bridge.stopHttp().then(() => { Object.assign(h, { listening: false, error: null }); windows.broadcast('bridge', ctx.bridgeState); });
+  };
+  ctx.settings.onChange(syncHttp);
+  syncHttp();
+}
+
+let httpRetry = null;
+let httpWarned = false;
+function listenHttp(port) {
+  const h = ctx.bridgeState.http;
   ctx.bridge.listen(port).then((p) => {
-    Object.assign(ctx.bridgeState, { listening: true, port: p, error: null });
+    if (!h.enabled) return ctx.bridge.stopHttp(); // switched off while starting
+    Object.assign(h, { listening: true, port: p, error: null });
     windows.broadcast('bridge', ctx.bridgeState);
   }, (err) => {
     const inUse = err.code === 'EADDRINUSE';
-    Object.assign(ctx.bridgeState, { listening: false, port, error: inUse ? 'in-use' : err.message });
+    Object.assign(h, { listening: false, port, error: inUse ? 'in-use' : err.message });
     windows.broadcast('bridge', ctx.bridgeState);
-    if (inUse && !ctx.bridgeState.warned) {
-      ctx.bridgeState.warned = true;
+    if (inUse && !httpWarned) {
+      httpWarned = true;
       notify(ctx.t('notify.portBusyTitle'), ctx.t('notify.portBusy', { port }));
     }
-    setTimeout(() => listenBridge(port), 10_000).unref?.();
+    if (h.enabled) httpRetry = setTimeout(() => listenHttp(port), 10_000);
   });
 }
 

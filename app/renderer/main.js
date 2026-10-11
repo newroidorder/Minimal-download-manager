@@ -365,12 +365,15 @@ function renderStatus() {
   setChipText(limiter, lim.enabled ? t('status.limitOn', { speed: fmtSpeed(lim.kbps * 1024) }) : t('status.limitOff'));
 
   const b = $('stBridge');
-  const seen = Object.entries(S.bridge.seen || {}).filter(([, ts]) => Date.now() - ts < 5 * 60_000).map(([k]) => t(`browser.${k}`));
+  const names = new Set(Object.keys(S.bridge.live || {}));
+  for (const [k, ts] of Object.entries(S.bridge.seen || {})) if (Date.now() - ts < 5 * 60_000) names.add(k);
+  const seen = [...names].map(k => t(`browser.${k}`));
+  const http = S.bridge.http || {};
   b.className = 'chip';
   b.replaceChildren(el('span', { class: 'dot' }));
-  if (!S.bridge.listening && S.bridge.error === 'in-use') { b.classList.add('bad'); b.append(t('status.portBusy', { port: S.bridge.port })); }
+  if (seen.length) { b.classList.add('good'); b.append(t('status.browserConnected', { names: seen.join(', ') })); }
+  else if (http.enabled && http.error === 'in-use') { b.classList.add('bad'); b.append(t('status.portBusy', { port: http.port })); }
   else if (!S.bridge.listening) { b.append(t('status.bridgeStarting')); }
-  else if (seen.length) { b.classList.add('good'); b.append(t('status.browserConnected', { names: seen.join(', ') })); }
   else { b.append(t('status.browserWaiting')); }
 }
 

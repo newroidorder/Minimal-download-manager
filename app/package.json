@@ -1,7 +1,7 @@
 {
   "name": "minimal-download-manager",
   "productName": "Minimal Download Manager",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "private": true,
   "description": "Minimal Download Manager: a download manager for Windows modelled on Internet Download Manager",
   "main": "main/index.js",
@@ -33,6 +33,7 @@
       "engine/**",
       "renderer/**",
       "locales/**",
+      "native/**",
       "build/icon.png",
       "build/tray.png",
       "build/tray@2x.png",
@@ -42,6 +43,10 @@
       {
         "from": "../extension",
         "to": "extension"
+      },
+      {
+        "from": "native",
+        "to": "native"
       }
     ],
     "protocols": [
@@ -77,7 +82,8 @@
         "en_US",
         "pt_BR"
       ],
-      "multiLanguageInstaller": true
+      "multiLanguageInstaller": true,
+      "include": "build/installer.nsh"
     },
     "publish": null
   }

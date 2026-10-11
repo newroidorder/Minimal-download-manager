@@ -8,7 +8,9 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write   # to attach the installer to a release on version tags
+  contents: write       # to publish the release
+  id-token: write       # to sign the build provenance (who built it, from which commit)
+  attestations: write
 
 jobs:
   build:
@@ -26,8 +28,18 @@ jobs:
       - run: npm ci
       - name: Engine tests (on real Windows)
         run: npm test
+      # Code signing: when the repository has the secrets WINDOWS_CERT (a .pfx,
+      # base64) and WINDOWS_CERT_PASSWORD, electron-builder signs the program
+      # and the installer. Without them the build is unsigned.
       - name: Build the installer
         run: npx electron-builder --win nsis --x64 --publish never
+        env:
+          CSC_LINK: ${{ secrets.WINDOWS_CERT }}
+          CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
+      - name: SHA-256 checksum
+        shell: bash
+        working-directory: app/dist
+        run: sha256sum Minimal-Download-Manager-Setup-*.exe | tee SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
         with:
           name: Minimal-Download-Manager-Setup
@@ -35,16 +47,45 @@ jobs:
           if-no-files-found: error
       # Every successful build of main publishes the installer as the release
       # for the version in app/package.json (tag v<version>, created here).
-      - name: Publish the release
+      # A published version is never replaced: to ship changes, raise the
+      # version. So the file behind a version (and its checksum) never changes.
+      - name: Check whether this version is already released
+        id: release
         if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           VERSION=$(node -p "require('./package.json').version")
-          TAG="v$VERSION"
-          if ! gh release view "$TAG" >/dev/null 2>&1; then
-            gh release create "$TAG" --target "$GITHUB_SHA" --title "Minimal Download Manager $VERSION" \
-              --notes "Download **Minimal-Download-Manager-Setup-$VERSION.exe** below and run it. Windows may say the publisher is unknown: click *More info* → *Run anyway*. Then follow *Connect your browser* in the README."
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if gh release view "v$VERSION" >/dev/null 2>&1; then
+            echo "::notice::v$VERSION is already released and is left as it is. Raise the version in app/package.json to publish a new one."
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
           fi
-          gh release upload "$TAG" dist/Minimal-Download-Manager-Setup-*.exe --clobber
+      - name: Record build provenance
+        if: steps.release.outputs.publish == 'true'
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: app/dist/Minimal-Download-Manager-Setup-*.exe
+      - name: Publish the release
+        if: steps.release.outputs.publish == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          FILE="dist/Minimal-Download-Manager-Setup-$VERSION.exe"
+          HASH=$(sha256sum "$FILE" | cut -d' ' -f1)
+          cat > notes.md <<EOF
+          Download **Minimal-Download-Manager-Setup-$VERSION.exe** below and run it. Then follow *Connect your browser* in the README.
+
+          **Check the download** (optional): in PowerShell, \`Get-FileHash .\\Minimal-Download-Manager-Setup-$VERSION.exe\` must show (capital or small letters, either is fine)
+
+          \`$HASH\`
+
+          This file was built by GitHub Actions from commit $GITHUB_SHA. With the GitHub CLI you can verify that: \`gh attestation verify Minimal-Download-Manager-Setup-$VERSION.exe --owner ${{ github.repository_owner }}\`
+          EOF
+          gh release create "v$VERSION" "$FILE" dist/SHA256SUMS.txt --target "$GITHUB_SHA" \
+            --title "Minimal Download Manager $VERSION" --notes-file notes.md

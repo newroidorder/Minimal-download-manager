@@ -122,6 +122,45 @@ test('site logins match host, wildcard and path', () => {
   assert.equal(hostMatches('*.example.org', 'evil-example.org'), false);
 });
 
+test('site logins go over HTTPS only, unless the site was saved as http://', () => {
+  const sites = [{ site: 'files.example.com', user: 'a', pass: '1' }, { site: 'http://nas.local', user: 'b', pass: '2' }];
+  assert.ok(credentialsFor(sites, 'https://files.example.com/x.zip'));
+  assert.equal(credentialsFor(sites, 'http://files.example.com/x.zip'), null, 'not over plain HTTP');
+  assert.ok(credentialsFor(sites, 'http://nas.local/x.zip'), 'explicit http:// entry');
+  assert.equal(credentialsFor(sites, 'https://nas.local/x.zip'), null);
+  assert.equal(credentialsFor(sites, 'ftp://files.example.com/x.zip'), null);
+});
+
+test('saved passwords are encrypted on disk and read back', () => {
+  const file = path.join(tmpDir(), 'settings.json');
+  // Stand-in for DPAPI: reversible, but the text must not appear on disk.
+  const cipher = {
+    encrypt: t => Buffer.from(t).reverse().toString('base64'),
+    decrypt: b => Buffer.from(b, 'base64').reverse().toString()
+  };
+  fs.writeFileSync(file, JSON.stringify({ version: 2, sites: [{ site: 'a.com', user: 'u', pass: 'old-plain' }] }));
+  const s = new Settings(file, BASE, null, { cipher });
+  assert.equal(s.get().sites[0].pass, 'old-plain', 'plain text from older versions still works');
+  assert.doesNotMatch(fs.readFileSync(file, 'utf8'), /old-plain/, 'and is encrypted right away');
+
+  s.update({ proxy: { user: 'p', pass: 'proxy-secret' }, sites: [{ site: 'a.com', user: 'u', pass: 'site-secret' }] });
+  const disk = fs.readFileSync(file, 'utf8');
+  assert.doesNotMatch(disk, /proxy-secret|site-secret/);
+  assert.match(JSON.parse(disk).proxy.pass, /^enc:/);
+  const again = new Settings(file, BASE, null, { cipher }).get();
+  assert.equal(again.proxy.pass, 'proxy-secret');
+  assert.equal(again.sites[0].pass, 'site-secret');
+
+  const broken = { encrypt: cipher.encrypt, decrypt: () => { throw new Error('other user'); } };
+  assert.equal(new Settings(file, BASE, null, { cipher: broken }).get().proxy.pass, '', 'unreadable password is dropped, not shown as garbage');
+});
+
+test('the HTTP bridge is off and cookies are sent by default', () => {
+  const g = new Settings(null, BASE).get().general;
+  assert.equal(g.allowHttpBridge, false);
+  assert.equal(g.sendCookies, true);
+});
+
 test('batch download patterns', () => {
   assert.deepEqual(expand('http://x/img*.jpg', 1, 3), ['http://x/img1.jpg', 'http://x/img2.jpg', 'http://x/img3.jpg']);
   assert.deepEqual(expand('http://x/*.png', 8, 10, 3), ['http://x/008.png', 'http://x/009.png', 'http://x/010.png']);

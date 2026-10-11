@@ -63,14 +63,15 @@ function renderBrowsers() {
   $('browsers').replaceChildren(...BROWSERS.map((b) => {
     const box = el('input', { type: 'checkbox', checked: S.general.browsers[b] !== false });
     box.addEventListener('change', () => { S.general.browsers[b] = box.checked; });
-    const last = seen[b];
+    const last = state.bridge?.live?.[b] ? Date.now() : seen[b];
     const status = last ? el('span', { class: 'hint ok', text: t('opt.g.seen', { when: new Date(last).toLocaleString() }) }) : el('span', { class: 'hint', text: t('opt.g.notSeen') });
     return el('label', { class: 'check browser-row' }, box, el('span', { class: 'grow', text: t(`browser.${b}`) }), status);
   }));
   const b = state.bridge;
-  $('extStatus').textContent = !b.listening && b.error === 'in-use' ? t('status.portBusy', { port: b.port })
-    : Object.keys(seen).length ? t('opt.g.extOk') : t('opt.g.extWaiting');
-  $('extStatus').className = `hint ${!b.listening ? 'error' : Object.keys(seen).length ? 'ok' : ''}`;
+  const connected = Object.keys(b.live || {}).length || Object.keys(seen).length;
+  const busy = b.http?.enabled && b.http.error === 'in-use';
+  $('extStatus').textContent = connected ? t('opt.g.extOk') : busy ? t('status.portBusy', { port: b.http.port }) : t('opt.g.extWaiting');
+  $('extStatus').className = `hint ${connected ? 'ok' : busy ? 'error' : ''}`;
 }
 
 // ---------- Save to: categories ----------

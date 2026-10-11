@@ -19,10 +19,11 @@ connector: it hands your downloads to the program and has nothing to set up.
 
 ## Install
 
-1. Download **Minimal-Download-Manager-Setup-2.1.0.exe** from the [Releases page](../../releases) (or from the
-   latest successful **Windows build** run under Actions).
-2. Run it. The installer isn't code-signed, so Windows SmartScreen may show "Windows protected
-   your PC": click **More info → Run anyway**.
+1. Download **Minimal-Download-Manager-Setup-2.2.0.exe** from the [Releases page](../../releases).
+   Optionally check it: the release page lists its SHA-256, which PowerShell's
+   `Get-FileHash .\Minimal-Download-Manager-Setup-2.2.0.exe` must match.
+2. Run it. The installer isn't code-signed yet (see [Security](#security)), so Windows SmartScreen
+   may show "Windows protected your PC": click **More info → Run anyway**.
 3. Minimal Download Manager starts and from then on starts with Windows, sitting in the notification area
    (next to the clock). Closing the window keeps it running there, like IDM.
 
@@ -34,8 +35,9 @@ connector: it hands your downloads to the program and has nothing to set up.
 3. That's it. There's nothing to configure in the extension. The status bar in Minimal Download Manager shows
    "Connected: Opera" once the browser has talked to it.
 
-If you used the earlier "npm start" version: stop that server first (it used the same port), and
-load the extension from the new folder. The extension has a new fixed ID, so remove the old one.
+**Updating from 2.1 or older:** after installing, open your browser's extensions page and click the
+reload button (↻) on Minimal Download Manager, or restart the browser. The extension now connects
+through native messaging instead of port 7878.
 
 ## What it does (the features from IDM)
 
@@ -50,9 +52,9 @@ half of the largest remaining part), pause and resume (also after a restart), au
 direct writing (no temporary files to merge), duplicate-address handling, file names from the server.
 
 **Browser capture**: downloads the browser starts, clicks on file links, right-click "Download with
-Minimal Download Manager", and videos/files spotted on the page (listed in the extension's popup). Your cookies
-(including HttpOnly) go along so logged-in downloads work. Hold **Alt** while clicking to let the
-browser download instead.
+Minimal Download Manager", and videos/files spotted on the page (listed in the extension's popup). The site's cookies
+(including HttpOnly) go along so logged-in downloads work; you can switch that off in Options → General.
+Hold **Alt** while clicking to let the browser download instead.
 
 **Menus as in IDM**
 - *Tasks*: Add URL, Add batch download (`img*.jpg` from 1 to 50), Site Grabber, Import/Export list, Exit
@@ -67,13 +69,13 @@ browser download instead.
 
 | Tab | What you can set |
 |---|---|
-| General | Start with Windows, clipboard monitoring, which browsers to capture from, the bypass key, the right-click menu, language, theme, extension folder |
+| General | Start with Windows, clipboard monitoring, which browsers to capture from, the bypass key, the right-click menu, sending cookies, language, theme, extension folder, the old port-7878 connection (off) |
 | File types | Types captured automatically (IDM's default list), sites and addresses never to capture |
 | Save to | Categories with their folder and file types, new/edit/delete categories, remember last folder, file date from the server |
 | Downloads | Show Download File Info / progress / complete windows, duplicate-address rule, User-Agent, antivirus scan after download (Microsoft Defender by default) |
 | Connection | Connections per download (1–32), downloads at the same time, per-server exceptions, speed limiter, download limits (X MB every Y hours) |
 | Proxy / Socks | None, Windows settings, automatic script (PAC), or manual HTTP / SOCKS5 with login |
-| Sites and logins | User name and password per site, host, wildcard or path |
+| Sites and logins | User name and password per site, host, wildcard or path (sent over HTTPS only, stored encrypted) |
 | Retry | Attempts (0 = keep trying) and the wait between them. IDM's dial-up/VPN options aren't needed on modern Windows. |
 | Sounds | Download complete, download failed, queue started, queue finished: built-in tone or your own file |
 
@@ -96,6 +98,7 @@ app/            the Windows program (Electron)
   main/         program shell: windows, tray, start with Windows, IPC, notifications, sounds
   renderer/     the windows (plain HTML/CSS/JS, strict CSP, no Node access)
   locales/      en.json, pt-BR.json
+  native/       native messaging host the browser starts (host.js) and the pipe protocol
   test/         engine tests (node:test)
   test-e2e/     drives the real program and extension (Playwright)
 extension/      the browser connector (Manifest V3)
@@ -106,18 +109,58 @@ docs/           screenshots, the original analysis prompt and review
 cd app
 npm install
 npm start            # run the program
-npm test             # 48 engine tests: segmentation, resume, queues, scheduler, proxies, quota…
+npm test             # 57 engine tests: segmentation, resume, queues, scheduler, proxies, quota…
 npm run test:e2e     # real program + real extension (needs: npm i -D playwright)
 npm run dist         # Windows installer in app/dist (on Linux this needs Wine)
 ```
 
 Every push to `main` makes the **Windows build** workflow run the tests on Windows, build the
-installer, and publish it as the release for the version in `app/package.json`.
+installer, and publish it as the release for the version in `app/package.json`. A version that is
+already released is never replaced: raise the version to publish changes.
 
-### How the browser connection is secured
+## Security
 
-The program listens on `127.0.0.1:7878` only. It accepts requests from the Minimal Download Manager extension
-(recognised by its fixed ID, which browsers put in the `Origin` header and web pages cannot fake)
-or with the token in `%APPDATA%\Minimal Download Manager\config.json`. There are no CORS headers, the `Host` header
-is checked (no DNS rebinding), only JSON is accepted, and forwarded request headers are limited
-to cookies, referrer, user agent and language. Cookies are kept in memory only.
+### How the browser connection works
+
+Like IDM (which uses `IDMMsgHost.exe`), the extension talks to the program through **native
+messaging**:
+
+```
+extension ──native messaging──▶ host (started by the browser) ──private pipe──▶ program
+```
+
+- The program registers the host for your Windows user on every start (`HKCU\Software\Google\Chrome\NativeMessagingHosts`
+  and the Edge/Brave/Chromium keys; Opera and Vivaldi read Chrome's). The browser only lets the
+  extension with our fixed ID start it.
+- The host reaches the program over a Windows named pipe. Before anything else, both sides prove
+  they know a random secret in `%APPDATA%\Minimal Download Manager\config.json`, a file only your
+  Windows user can read. Other programs, and other users on the PC, can't add downloads or receive
+  your cookies through it, and the host never talks to a program pretending to be ours.
+- No network port is open. The old `127.0.0.1:7878` connection is **off**. It can be switched on in
+  Options → General for a browser that can't use native messaging. While it is on, any program
+  running on your PC could send it a download, because programs (unlike web pages) can fake the
+  `Origin` header.
+- Only cookies, referrer, user agent and language are passed on, and only for the download's own
+  address. Cookies stay in memory and are never written to disk. They aren't sent again after a
+  redirect to another site.
+
+### Passwords
+
+Passwords in *Sites and logins* and the proxy settings are stored encrypted with Windows DPAPI
+(`enc:` in `settings.json`). Only your Windows user on this PC can decrypt them. Older plain-text
+files are encrypted the first time 2.2 starts. Saved logins are only sent over **HTTPS**. A site
+entered as `http://…` (for example an old router) is the one exception, and only because you typed
+it that way.
+
+### Releases
+
+- Each version is built by GitHub Actions from the public source and published once. A release is
+  never replaced later.
+- The release notes and `SHA256SUMS.txt` give the installer's SHA-256.
+- A signed [build provenance attestation](https://docs.github.com/actions/security-for-github-actions/using-artifact-attestations)
+  ties the file to the exact commit and workflow. Check it with
+  `gh attestation verify Minimal-Download-Manager-Setup-<version>.exe --owner newroidorder`.
+- The installer is **not code-signed** yet, which is why SmartScreen warns. The workflow signs
+  automatically once a certificate is added as the repository secrets `WINDOWS_CERT` (base64 .pfx)
+  and `WINDOWS_CERT_PASSWORD`. Free signing for open-source projects is available from
+  [SignPath Foundation](https://signpath.org/). Azure Trusted Signing is a low-cost paid option.

@@ -58,6 +58,8 @@
             </select>
           </div>
           <label class="check gap-top"><input type="checkbox" data-path="general.contextMenu"> <span data-i18n="opt.g.contextMenu"></span></label>
+          <label class="check"><input type="checkbox" data-path="general.sendCookies"> <span data-i18n="opt.g.cookies"></span></label>
+          <p class="hint" data-i18n="opt.g.cookiesHint"></p>
         </div>
         <div class="group">
           <h3 data-i18n="opt.g.extension"></h3>
@@ -72,6 +74,8 @@
             <button class="btn" id="extCopy" data-icon="copy"><span data-i18n="opt.g.copy"></span></button>
           </div>
           <p class="hint" id="extStatus"></p>
+          <label class="check gap-top"><input type="checkbox" data-path="general.allowHttpBridge"> <span data-i18n="opt.g.http"></span></label>
+          <p class="hint" data-i18n="opt.g.httpHint"></p>
         </div>
       </section>
 
@@ -213,6 +217,7 @@
       <section data-sec="sites" hidden>
         <h2 class="pane-title" data-i18n="opt.sites"></h2>
         <p class="hint" data-i18n="opt.u.hint"></p>
+        <p class="hint" data-i18n="opt.u.secure"></p>
         <div class="table-box small-table"><table class="grid"><thead><tr><th data-i18n="opt.u.site"></th><th data-i18n="opt.u.user"></th><th data-i18n="opt.u.pass"></th></tr></thead><tbody id="sites"></tbody></table></div>
         <div class="kv gap-top">
           <span data-i18n="opt.u.site"></span><input type="text" id="siteSite" placeholder="files.example.com/private/">

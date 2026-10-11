@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="ui.css">
+  <style>
+    body { width: 380px; padding: 12px; }
+    header { display: flex; justify-content: space-between; align-items: baseline; }
+    header strong { font-size: 15px; }
+    header nav a { margin-left: 10px; font-size: 12px; text-decoration: none; }
+    #status { font-size: 12px; margin: 4px 0 10px; }
+    form { display: flex; gap: 6px; }
+    ul { list-style: none; margin: 0; padding: 0; }
+    li { padding: 7px 0; border-top: 1px solid var(--border); }
+    li:first-child { border-top: 0; }
+    .row { display: flex; gap: 8px; align-items: center; }
+    .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .meta { font-size: 11px; color: var(--muted); }
+    .bar { height: 4px; background: var(--track); border-radius: 2px; overflow: hidden; margin: 4px 0 2px; }
+    .fill { height: 100%; background: var(--accent); }
+    .fill.done { background: var(--ok); }
+    .fill.error { background: var(--bad); }
+    .empty { color: var(--muted); font-size: 12px; padding: 4px 0; }
+  </style>
+</head>
+<body>
+  <header>
+    <strong>Mini IDM</strong>
+    <nav><a href="#" id="openUi">Open app</a><a href="#" id="openOptions">Settings</a></nav>
+  </header>
+  <div id="status" class="muted">Checking server…</div>
+
+  <form id="add">
+    <input id="url" type="url" placeholder="Paste a URL" required aria-label="URL to download">
+    <button type="submit">Download</button>
+  </form>
+
+  <h2>Found on this page</h2>
+  <ul id="detected"></ul>
+
+  <h2>Recent downloads</h2>
+  <ul id="recent"></ul>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

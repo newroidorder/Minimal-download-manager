@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "Mini IDM",
+  "version": "1.0.0",
+  "description": "Sends downloads to the local Mini IDM server for segmented, resumable downloading.",
+  "minimum_chrome_version": "119",
+  "permissions": ["downloads", "cookies", "webRequest", "storage", "contextMenus"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle",
+      "all_frames": true
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Mini IDM"
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  }
+}

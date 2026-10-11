@@ -1,0 +1,16 @@
+{
+  "name": "mini-idm-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Minimal segmented download manager: local server for the Mini IDM browser extension",
+  "main": "index.js",
+  "bin": { "mini-idm": "index.js" },
+  "scripts": {
+    "start": "node index.js",
+    "test": "node --test",
+    "test:e2e": "node test-e2e/extension.e2e.js"
+  },
+  "engines": {
+    "node": ">=18.17"
+  }
+}

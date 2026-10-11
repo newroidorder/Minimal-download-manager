@@ -24,8 +24,9 @@ function loadConfig(env = process.env) {
     home,
     token: saved.token,
     port: Number(env.MINI_IDM_PORT || saved.port || 7878),
-    saveDir: env.MINI_IDM_SAVE_DIR || saved.saveDir || path.join(os.homedir(), 'Downloads', 'mini-idm'),
-    maxActive: Number(env.MINI_IDM_MAX_ACTIVE || saved.maxActive || 3)
+    // Base folder for the default category folders (Downloads\Music, Downloads\Programs, ...).
+    // Folders, categories and limits are changed in the web UI's Settings.
+    saveDir: env.MINI_IDM_SAVE_DIR || saved.saveDir || path.join(os.homedir(), 'Downloads')
   };
 }
 

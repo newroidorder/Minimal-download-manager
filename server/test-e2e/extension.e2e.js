@@ -62,13 +62,30 @@ async function waitFor(fn, what, timeoutMs = 15_000) {
     const queue = () => app.queue.list();
     const page = await context.newPage();
 
-    await check('link click is captured and HttpOnly cookies are forwarded', async () => {
+    await check('link click opens "Download File Info"; Start saves to the Compressed folder', async () => {
       await page.goto(`${origin.base}/page.html`);
       origin.stats.cookies = [];
+      const dialogOpened = context.waitForEvent('page', { predicate: p => p.url().includes('/dialog.html#') });
       await page.click('#zip');
-      const item = await waitFor(() => queue().find(i => i.url.endsWith('/files/archive.zip') && i.status === 'done'), 'archive.zip to finish');
+      const dialog = await dialogOpened;
+      await dialog.waitForSelector('#ask:not([hidden])');
+      await dialog.waitForFunction(() => !document.getElementById('askInfo').textContent.includes('Getting'));
+      assert.equal(await dialog.inputValue('#filename'), 'archive.zip');
+      assert.equal(await dialog.inputValue('#category'), 'compressed');
+      assert.equal(await dialog.inputValue('#folder'), path.join(home, 'downloads', 'Compressed'));
+      assert.match(await dialog.textContent('#askInfo'), /20\.00 MB/);
+      assert.equal(queue().find(i => i.url.endsWith('/files/archive.zip')).status, 'pending', 'waits for the user');
+
+      await dialog.click('#start');
+      await dialog.waitForSelector('#complete:not([hidden])', { timeout: 15_000 });
+      const item = queue().find(i => i.url.endsWith('/files/archive.zip'));
+      assert.equal(item.dest, path.join(home, 'downloads', 'Compressed', 'archive.zip'));
       assert.equal(sha256(fs.readFileSync(item.dest)), sha256(BODY));
+      assert.equal(await dialog.textContent('#donePath'), item.dest);
       assert.ok(origin.stats.cookies.includes('sid=httponly-secret'), `origin saw cookies: ${origin.stats.cookies}`);
+      await dialog.click('#closeDone');
+      // The rest of the checks use automatic mode without windows.
+      app.settings.update({ askWhereToSave: false, showDialog: false });
     });
 
     await check('browser-started download is taken over and removed from Chrome', async () => {

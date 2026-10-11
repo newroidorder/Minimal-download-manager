@@ -16,7 +16,9 @@ Node.js ≥ 18.17 with **zero runtime dependencies**, plus a Chrome/Edge (MV3) e
 | `IDMGCExt.crx` browser extension | `extension/` | Same three capture paths: browser-started downloads, link clicks, and media seen in page traffic |
 | `IDMMsgHost.exe` native messaging bridge | `POST /api/downloads` on `127.0.0.1` with a bearer token | Simpler to run. See [Roadmap](#roadmap) for the native-messaging version |
 | `IDMan.exe` segmented engine | `server/lib/downloader.js` | Dynamic segmentation, in-place writes, per-segment retry, resume |
-| Download list / dialogs | `server/public/` web UI, extension popup | |
+| "Download File Info", progress and "Download complete" windows | `server/public/dialog.html` | Choose the name and folder, watch each connection, then Open / Open folder |
+| Categories (Music, Programs, Video, …) | `server/lib/settings.js` | Each file type goes to its own folder, editable in Settings |
+| Download list | `server/public/` web UI, extension popup | |
 | `idmwfp*.sys` network driver | none | A network driver only sees encrypted HTTPS bytes anyway |
 
 ```
@@ -33,6 +35,35 @@ Node.js ≥ 18.17 with **zero runtime dependencies**, plus a Chrome/Edge (MV3) e
                                                           ▼
                                                      origin server
 ```
+
+### What you see when you download
+
+1. **Download File Info** opens: the file name, size and type, a category (picked from the file type), and
+   the folder for that category, for example `Downloads\Music` for an `.mp3`. Change the name or folder,
+   or click **Browse…** for a folder picker. Tick *Always use this folder* to make it the category's new
+   default. Then choose **Start Download**, **Download Later**, or **Cancel**.
+2. The same window turns into the **progress** view: transfer rate, time left, number of connections,
+   and a bar showing where each connection started and how far it got.
+3. **Download complete**: **Open**, **Open folder**, or **Close**.
+
+| Download File Info | Progress | Complete |
+|---|---|---|
+| ![](docs/dialog-ask.png) | ![](docs/dialog-progress.png) | ![](docs/dialog-complete.png) |
+
+Both windows can be turned off in **Settings**. Files then go straight to their category folder.
+
+### Categories and folders
+
+| Category | Default folder | File types (editable) |
+|---|---|---|
+| Compressed | `Downloads\Compressed` | zip, rar, 7z, gz, tar, … |
+| Documents | `Downloads\Documents` | pdf, doc(x), xls(x), ppt(x), txt, epub, … |
+| Music | `Downloads\Music` | mp3, wav, flac, m4a, aac, ogg, … |
+| Programs | `Downloads\Programs` | exe, msi, apk, dmg, iso, … |
+| Video | `Downloads\Video` | mp4, mkv, avi, mov, webm, … |
+| General | `Downloads` | everything else |
+
+Change folders and file types in the web UI under **Settings**. They're saved in `~/.mini-idm/settings.json`.
 
 ### How a download works
 
@@ -55,7 +86,7 @@ Node.js ≥ 18.17 with **zero runtime dependencies**, plus a Chrome/Edge (MV3) e
 cd server
 npm start
 # Mini IDM running at http://127.0.0.1:7878
-# Saving to:       ~/Downloads/mini-idm
+# Saving to:       ~/Downloads (sorted into category folders)
 # Extension token: <token>
 ```
 
@@ -69,9 +100,11 @@ Settings (env var, or `~/.mini-idm/config.json`):
 | Env | Default |
 |---|---|
 | `MINI_IDM_PORT` | `7878` |
-| `MINI_IDM_SAVE_DIR` | `~/Downloads/mini-idm` |
-| `MINI_IDM_MAX_ACTIVE` | `3` |
-| `MINI_IDM_HOME` | `~/.mini-idm` (config, token, queue) |
+| `MINI_IDM_SAVE_DIR` | `~/Downloads` (base for the default category folders) |
+| `MINI_IDM_HOME` | `~/.mini-idm` (config, token, settings, queue) |
+
+Everything else (folders, file types, the dialog, downloads at once, connections per download up to 32)
+is in the web UI under **Settings**.
 
 `Ctrl-C` pauses running downloads, and they can be resumed after the next start.
 
@@ -109,7 +142,7 @@ A local download server is a juicy target: any website can try to send requests 
 
 ```bash
 cd server
-npm test            # 25 tests, ~3 s, no dependencies
+npm test            # 36 tests, ~3 s, no dependencies
 npm run test:e2e    # loads the real extension into Chromium (needs: npm i -D playwright)
 ```
 
@@ -130,7 +163,10 @@ browser-download takeover, media detection without auto-download, and the fallba
 - No scheduler, site grabber, speed limiter or FTP.
 - Firefox: the code is mostly compatible, but it's untested and the manifest needs `browser_specific_settings`.
 - A browser-started download has already made one request before it is taken over, so strict one-time URLs
-  can fail on that path. Click capture avoids this.
+  can fail on that path. Click capture avoids this, but with "Ask where to save" on, the dialog's file-info
+  request also uses up a one-time URL. Turn that setting off for sites with one-time links.
+- The folder picker and Open / Open folder use the OS: PowerShell and Explorer on Windows, `osascript`/`open`
+  on macOS, and zenity or kdialog plus `xdg-open` on Linux. Without a picker, type the folder path instead.
 
 ## Roadmap
 

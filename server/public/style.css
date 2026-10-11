@@ -34,8 +34,8 @@ h1 { font-size: 20px; margin: 0; }
 .conn { font-size: 12px; color: var(--muted); }
 .conn.online { color: var(--ok); }
 
-form { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
-input { flex: 1 1 260px; min-width: 0; padding: 9px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); font: inherit; }
+#add { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+input[type=url], input[type=text], input[type=number] { flex: 1 1 260px; min-width: 0; padding: 9px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); font: inherit; }
 #name { flex: 0 1 220px; }
 input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
 button { padding: 9px 16px; border: 1px solid var(--accent); border-radius: 6px; background: var(--accent); color: var(--accent-text); font: inherit; font-weight: 600; cursor: pointer; }
@@ -67,3 +67,45 @@ tbody tr:first-child td { border-top: 0; }
 .actions { white-space: nowrap; text-align: right; }
 .actions button + button { margin-left: 4px; }
 .empty { text-align: center; color: var(--muted); padding: 32px; margin: 0; }
+
+/* ---------- shared form bits ---------- */
+select { padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); font: inherit; }
+button.secondary { background: transparent; color: var(--text); border-color: var(--border); font-weight: 500; }
+button:disabled { opacity: .6; cursor: default; }
+.check { display: flex; gap: 8px; align-items: flex-start; font-weight: 400; }
+.check input { flex: none; margin-top: 3px; }
+.hint { font-size: 12px; color: var(--muted); margin: 4px 0; }
+
+/* ---------- dialog window ---------- */
+body.dialog { max-width: none; padding: 18px 20px; }
+.dialog h1 { font-size: 17px; margin: 0 0 6px; }
+.dialog label { display: block; margin: 12px 0 4px; font-weight: 600; font-size: 13px; }
+.dialog label.check { font-weight: 400; margin-top: 8px; }
+.dialog input[type=text], .dialog select { width: 100%; }
+.dialog .url { margin: 0; font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dialog .name { margin: 4px 0 2px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dialog .info { color: var(--muted); font-size: 13px; margin: 12px 0 0; }
+.dialog .form-error { margin: 8px 0 0; font-size: 13px; }
+.folder-row { display: flex; gap: 6px; }
+.folder-row input { flex: 1; min-width: 0; }
+.buttons { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; flex-wrap: wrap; }
+.bar.big { height: 10px; border-radius: 5px; margin: 12px 0 10px; }
+dl.stats { display: grid; grid-template-columns: auto 1fr; gap: 3px 16px; margin: 0 0 10px; font-size: 13px; }
+dl.stats dt { color: var(--muted); }
+dl.stats dd { margin: 0; font-variant-numeric: tabular-nums; min-width: 0; }
+dl.stats dd.path { overflow-wrap: anywhere; }
+#segments { display: block; width: 100%; height: 14px; border-radius: 3px; }
+
+/* ---------- settings panel (main page) ---------- */
+.header-actions { display: flex; gap: 12px; align-items: baseline; }
+.settings { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+.settings h2 { font-size: 15px; margin: 0 0 8px; }
+.settings .grid { display: grid; grid-template-columns: 110px minmax(0, 1.4fr) minmax(0, 1fr); gap: 6px 10px; align-items: center; }
+.settings .grid .head { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 600; }
+.settings .grid input { flex: none; width: 100%; padding: 6px 9px; }
+.settings .row { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 12px; align-items: center; }
+.settings .row label { display: flex; gap: 6px; align-items: center; }
+.settings .row input[type=number] { flex: none; width: 70px; padding: 6px 8px; }
+.settings .buttons { justify-content: flex-start; }
+.settings .saved { color: var(--ok); font-size: 13px; align-self: center; }
+@media (max-width: 640px) { .settings .grid { grid-template-columns: 1fr; } .settings .grid .head { display: none; } }

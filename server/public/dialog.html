@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="mini-idm-token" content="__TOKEN__">
+  <title>Mini IDM</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body class="dialog">
+  <!-- 1. Download File Info: choose name and folder -->
+  <section id="ask" hidden>
+    <h1>Download File Info</h1>
+    <p class="url" id="askUrl"></p>
+
+    <label for="category">Category</label>
+    <select id="category"></select>
+
+    <label for="filename">Save as</label>
+    <input id="filename" type="text" autocomplete="off" spellcheck="false">
+
+    <label for="folder">Save to folder</label>
+    <div class="folder-row">
+      <input id="folder" type="text" autocomplete="off" spellcheck="false">
+      <button type="button" id="browse" class="secondary">Browse…</button>
+    </div>
+    <label class="check"><input type="checkbox" id="remember"> <span>Always use this folder for <b id="rememberCat"></b> files</span></label>
+
+    <p class="info" id="askInfo">Getting file info…</p>
+    <p class="form-error" id="askError" hidden></p>
+
+    <div class="buttons">
+      <button type="button" id="start">Start Download</button>
+      <button type="button" id="later" class="secondary">Download Later</button>
+      <button type="button" id="cancelAsk" class="secondary">Cancel</button>
+    </div>
+  </section>
+
+  <!-- 2. Progress -->
+  <section id="progress" hidden>
+    <h1 id="progTitle">Downloading</h1>
+    <p class="name" id="progName"></p>
+    <p class="url" id="progUrl"></p>
+    <div class="bar big"><div class="fill" id="progFill"></div></div>
+    <dl class="stats">
+      <dt>Status</dt><dd id="progStatus"></dd>
+      <dt>File size</dt><dd id="progSize"></dd>
+      <dt>Downloaded</dt><dd id="progDone"></dd>
+      <dt>Transfer rate</dt><dd id="progSpeed"></dd>
+      <dt>Time left</dt><dd id="progEta"></dd>
+      <dt>Connections</dt><dd id="progConns"></dd>
+    </dl>
+    <p class="hint">Start positions and progress of each connection</p>
+    <canvas id="segments" height="14"></canvas>
+    <p class="form-error" id="progError" hidden></p>
+    <div class="buttons">
+      <button type="button" id="pauseResume" class="secondary">Pause</button>
+      <button type="button" id="cancelDl" class="secondary">Cancel</button>
+      <button type="button" id="hide" class="secondary">Hide</button>
+    </div>
+  </section>
+
+  <!-- 3. Download complete -->
+  <section id="complete" hidden>
+    <h1>Download complete</h1>
+    <p class="name" id="doneName"></p>
+    <dl class="stats">
+      <dt>Size</dt><dd id="doneSize"></dd>
+      <dt>Saved to</dt><dd id="donePath" class="path"></dd>
+    </dl>
+    <div class="buttons">
+      <button type="button" id="openFile">Open</button>
+      <button type="button" id="openFolder" class="secondary">Open folder</button>
+      <button type="button" id="closeDone" class="secondary">Close</button>
+    </div>
+  </section>
+
+  <section id="gone" hidden>
+    <h1>Download not found</h1>
+    <p class="info">It may have been removed from the list.</p>
+    <div class="buttons"><button type="button" id="closeGone" class="secondary">Close</button></div>
+  </section>
+
+  <script src="/dialog.js"></script>
+</body>
+</html>

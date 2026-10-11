@@ -10,8 +10,32 @@
 <body>
   <header>
     <h1>Mini IDM</h1>
-    <span id="conn" class="conn">Connecting…</span>
+    <div class="header-actions">
+      <span id="conn" class="conn">Connecting…</span>
+      <button type="button" id="toggleSettings" class="ghost">Settings</button>
+    </div>
   </header>
+
+  <form class="settings" id="settings" hidden>
+    <h2>Download folders</h2>
+    <p class="hint">Files are sorted into a folder by type, like IDM. Anything that doesn't match goes to General.</p>
+    <div class="grid" id="catGrid">
+      <span class="head">Category</span><span class="head">Folder</span><span class="head">File types</span>
+    </div>
+    <div class="row">
+      <label class="check"><input type="checkbox" id="askWhereToSave"> Ask where to save each download</label>
+      <label class="check"><input type="checkbox" id="showDialog"> Show progress and "download complete" window</label>
+    </div>
+    <div class="row">
+      <label>Downloads at once <input type="number" id="maxActive" min="1" max="10"></label>
+      <label>Connections per download <input type="number" id="maxConnections" min="1" max="32"></label>
+    </div>
+    <p class="form-error" id="settingsError" hidden></p>
+    <div class="buttons">
+      <button type="submit">Save settings</button>
+      <span class="saved" id="settingsSaved" hidden>Saved.</span>
+    </div>
+  </form>
 
   <form id="add">
     <input id="url" type="url" required placeholder="Paste a download URL" autocomplete="off" aria-label="Download URL">

@@ -13,19 +13,27 @@ const fs = require('fs');
 const path = require('path');
 const { timingSafeEqual } = require('crypto');
 const { Queue } = require('./queue');
+const { Settings } = require('./settings');
+const system = require('./system');
 
 const PUBLIC = path.join(__dirname, '..', 'public');
 const STATIC = {
   '/app.js': ['app.js', 'text/javascript; charset=utf-8'],
+  '/dialog.js': ['dialog.js', 'text/javascript; charset=utf-8'],
   '/style.css': ['style.css', 'text/css; charset=utf-8']
 };
+const PAGES = { '/': 'index.html', '/index.html': 'index.html', '/dialog.html': 'dialog.html' };
 const CSP = "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; "
   + "base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
 const FORWARDED_HEADERS = new Set(['cookie', 'referer', 'user-agent', 'accept-language']);
 const MAX_BODY = 64 * 1024;
 
-function createApp({ token, saveDir, home, maxActive = 3, downloadOptions }) {
-  const queue = new Queue({ saveDir, stateFile: path.join(home, 'queue.json'), maxActive, downloadOptions });
+// os: { pickFolder, openFile, showInFolder }, replaceable in tests.
+// settings: overrides applied on top of <home>/settings.json at startup.
+function createApp({ token, saveDir, home, settings: overrides, downloadOptions, os = system }) {
+  const settings = new Settings(path.join(home, 'settings.json'), saveDir, overrides);
+  const queue = new Queue({ saveDir, stateFile: path.join(home, 'queue.json'), settings, downloadOptions });
+  let picking = false;
   const sseClients = new Set();
   const tokenBuf = Buffer.from(token);
 
@@ -39,7 +47,10 @@ function createApp({ token, saveDir, home, maxActive = 3, downloadOptions }) {
   const keepAlive = setInterval(() => { for (const res of sseClients) res.write(': ping\n\n'); }, 25_000);
   keepAlive.unref();
 
-  const indexHtml = fs.readFileSync(path.join(PUBLIC, 'index.html'), 'utf8').replace('__TOKEN__', token);
+  const pages = {};
+  for (const file of new Set(Object.values(PAGES))) {
+    pages[file] = fs.readFileSync(path.join(PUBLIC, file), 'utf8').replace('__TOKEN__', token);
+  }
 
   function send(res, status, body, headers = {}) {
     const isJson = typeof body !== 'string';
@@ -98,7 +109,7 @@ function createApp({ token, saveDir, home, maxActive = 3, downloadOptions }) {
   }
 
   async function handleApi(req, res, url) {
-    const m = /^\/api\/downloads\/([\w-]+)(?:\/(pause|resume|cancel))?$/.exec(url.pathname);
+    const m = /^\/api\/downloads\/([\w-]+)(?:\/(pause|resume|cancel|confirm|open|open-folder))?$/.exec(url.pathname);
 
     if (req.method === 'GET' && url.pathname === '/api/health') return send(res, 200, { ok: true, app: 'mini-idm' });
     if (req.method === 'GET' && url.pathname === '/api/queue') return send(res, 200, queue.list());
@@ -114,12 +125,64 @@ function createApp({ token, saveDir, home, maxActive = 3, downloadOptions }) {
     if (req.method === 'POST' && url.pathname === '/api/downloads') {
       const body = await readJson(req);
       if (typeof body.url !== 'string') return send(res, 400, { error: 'url required' });
+      let item;
       try {
         const filename = typeof body.filename === 'string' ? body.filename : null;
-        return send(res, 201, queue.add({ url: body.url, filename, headers: cleanHeaders(body.headers) }));
+        item = queue.add({ url: body.url, filename, headers: cleanHeaders(body.headers), interactive: body.interactive === true });
       } catch (e) {
         return send(res, 400, { error: e.message });
       }
+      // Tells the caller to open the dialog / progress window for this download.
+      const s = settings.get();
+      const dialogUrl = body.interactive === true && (item.status === 'pending' || s.showDialog) ? `/dialog.html#${item.id}` : null;
+      return send(res, 201, { ...item, dialogUrl });
+    }
+
+    if (req.method === 'GET' && url.pathname === '/api/settings') return send(res, 200, settings.get());
+    if (req.method === 'PUT' && url.pathname === '/api/settings') {
+      try {
+        const next = settings.update(await readJson(req));
+        queue.pump(); // maxActive may have grown
+        return send(res, 200, next);
+      } catch (e) {
+        return send(res, e.status || 400, { error: e.message });
+      }
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/pick-folder') {
+      const body = await readJson(req);
+      if (picking) return send(res, 409, { error: 'a folder picker is already open' });
+      picking = true;
+      try {
+        return send(res, 200, { path: await os.pickFolder(typeof body.initial === 'string' ? body.initial : '') });
+      } catch (e) {
+        return send(res, e.status || 500, { error: e.message });
+      } finally {
+        picking = false;
+      }
+    }
+
+    if (m && req.method === 'GET' && !m[2]) {
+      const item = queue.get(m[1]);
+      return item ? send(res, 200, item) : send(res, 404, { error: 'not found' });
+    }
+
+    if (m && req.method === 'POST' && m[2] === 'confirm') {
+      try {
+        const item = queue.confirm(m[1], await readJson(req));
+        return item ? send(res, 200, item) : send(res, 404, { error: 'not found' });
+      } catch (e) {
+        return send(res, e.status || 400, { error: e.message });
+      }
+    }
+
+    if (m && req.method === 'POST' && (m[2] === 'open' || m[2] === 'open-folder')) {
+      const item = queue.get(m[1]);
+      if (!item) return send(res, 404, { error: 'not found' });
+      // Only files this app finished downloading, never a path from the request.
+      if (item.status !== 'done' || !item.dest || !fs.existsSync(item.dest)) return send(res, 409, { error: 'file is not available' });
+      if (m[2] === 'open') os.openFile(item.dest); else os.showInFolder(item.dest);
+      return send(res, 200, { ok: true });
     }
 
     if (m && req.method === 'POST' && m[2]) {
@@ -148,8 +211,8 @@ function createApp({ token, saveDir, home, maxActive = 3, downloadOptions }) {
         return await handleApi(req, res, url);
       }
       if (req.method !== 'GET') return send(res, 405, 'method not allowed');
-      if (url.pathname === '/' || url.pathname === '/index.html') {
-        return send(res, 200, indexHtml, { 'Content-Type': 'text/html; charset=utf-8', 'Content-Security-Policy': CSP, 'Referrer-Policy': 'no-referrer' });
+      if (PAGES[url.pathname]) {
+        return send(res, 200, pages[PAGES[url.pathname]], { 'Content-Type': 'text/html; charset=utf-8', 'Content-Security-Policy': CSP, 'Referrer-Policy': 'no-referrer' });
       }
       const file = STATIC[url.pathname];
       if (file) {
@@ -169,7 +232,7 @@ function createApp({ token, saveDir, home, maxActive = 3, downloadOptions }) {
     await queue.close();
   }
 
-  return { server, queue, close };
+  return { server, queue, settings, close };
 }
 
 module.exports = { createApp };

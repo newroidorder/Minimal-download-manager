@@ -145,10 +145,105 @@ test('server', async (t) => {
   });
 });
 
+test('categories, "Download File Info" dialog flow, and OS actions', async (t) => {
+  const origin = await startOrigin();
+  const calls = [];
+  const os = {
+    pickFolder: async (initial) => { calls.push(['pick', initial]); return '/picked/folder'; },
+    openFile: (p) => calls.push(['open', p]),
+    showInFolder: (p) => calls.push(['folder', p])
+  };
+  const { app, port, saveDir, home } = await startApp({ os });
+  t.after(async () => { await app.close(); await origin.close(); });
+  const post = (p, body) => request(port, { method: 'POST', path: p, headers: auth, body });
+  const get = (id) => request(port, { path: `/api/downloads/${id}`, headers: auth }).then(r => r.json);
+
+  await t.test('automatic downloads go to the category folder', async () => {
+    const r = await post('/api/downloads', { url: `${origin.base}/small.txt`, filename: 'song.mp3' });
+    assert.equal(r.json.dialogUrl, null, 'API callers that are not interactive get no dialog');
+    const done = await waitFor(async () => { const i = await get(r.json.id); return i.status === 'done' && i; });
+    assert.equal(done.dest, path.join(saveDir, 'Music', 'song.mp3'));
+    assert.equal(done.category, 'music');
+  });
+
+  await t.test('interactive capture waits in "pending" with file info for the dialog', async () => {
+    const r = await post('/api/downloads', { url: `${origin.base}/attach?id=7`, interactive: true });
+    assert.equal(r.status, 201);
+    assert.equal(r.json.status, 'pending');
+    assert.equal(r.json.dialogUrl, `/dialog.html#${r.json.id}`);
+    const info = await waitFor(async () => { const i = await get(r.json.id); return !i.inspecting && i; });
+    assert.equal(info.filename, 'résumé.pdf');
+    assert.equal(info.size, 5);
+    assert.equal(info.category, 'documents');
+    assert.equal(info.dir, path.join(saveDir, 'Documents'));
+    await new Promise(r => setTimeout(r, 100));
+    assert.equal((await get(r.json.id)).status, 'pending', 'nothing downloads before the user answers');
+  });
+
+  await t.test('confirm with a chosen folder and name downloads there', async () => {
+    const r = await post('/api/downloads', { url: `${origin.base}/ranged`, interactive: true });
+    const chosen = path.join(home, 'Chosen Folder');
+    assert.equal((await post(`/api/downloads/${r.json.id}/confirm`, { dir: 'relative/dir' })).status, 400);
+    const c = await post(`/api/downloads/${r.json.id}/confirm`, { dir: chosen, filename: 'my-file.bin', start: true });
+    assert.equal(c.status, 200);
+    const done = await waitFor(async () => { const i = await get(r.json.id); return i.status === 'done' && i; });
+    assert.equal(done.dest, path.join(chosen, 'my-file.bin'));
+    assert.equal(sha256(fs.readFileSync(done.dest)), sha256(BODY));
+    assert.equal((await post(`/api/downloads/${r.json.id}/confirm`, { dir: chosen })).status, 409, 'only pending downloads can be confirmed');
+  });
+
+  await t.test('"Download Later" parks it as paused', async () => {
+    const r = await post('/api/downloads', { url: `${origin.base}/small.txt`, interactive: true });
+    await post(`/api/downloads/${r.json.id}/confirm`, { dir: saveDir, start: false });
+    await new Promise(r => setTimeout(r, 100));
+    assert.equal((await get(r.json.id)).status, 'paused');
+    await post(`/api/downloads/${r.json.id}/resume`);
+    await waitFor(async () => (await get(r.json.id)).status === 'done');
+  });
+
+  await t.test('with "ask where to save" off, interactive captures start right away', async () => {
+    const s = await request(port, { method: 'PUT', path: '/api/settings', headers: auth, body: { askWhereToSave: false } });
+    assert.equal(s.json.askWhereToSave, false);
+    const r = await post('/api/downloads', { url: `${origin.base}/small.txt`, filename: 'tool.exe', interactive: true });
+    assert.notEqual(r.json.status, 'pending');
+    assert.equal(r.json.dialogUrl, `/dialog.html#${r.json.id}`, 'the progress window still opens');
+    const done = await waitFor(async () => { const i = await get(r.json.id); return i.status === 'done' && i; });
+    assert.equal(done.dest, path.join(saveDir, 'Programs', 'tool.exe'));
+    await request(port, { method: 'PUT', path: '/api/settings', headers: auth, body: { askWhereToSave: true } });
+  });
+
+  await t.test('settings API validates input', async () => {
+    const bad = await request(port, { method: 'PUT', path: '/api/settings', headers: auth, body: { categories: [{ id: 'music', folder: 'not/absolute' }] } });
+    assert.equal(bad.status, 400);
+    assert.equal((await request(port, { path: '/api/settings' })).status, 401);
+  });
+
+  await t.test('folder picker and open actions go through the OS layer', async () => {
+    const p = await post('/api/pick-folder', { initial: '/start/here' });
+    assert.deepEqual(p.json, { path: '/picked/folder' });
+    assert.deepEqual(calls.at(-1), ['pick', '/start/here']);
+
+    const done = app.queue.list().find(i => i.status === 'done');
+    await post(`/api/downloads/${done.id}/open`);
+    await post(`/api/downloads/${done.id}/open-folder`);
+    assert.deepEqual(calls.slice(-2), [['open', done.dest], ['folder', done.dest]]);
+
+    const pending = (await post('/api/downloads', { url: `${origin.base}/small.txt`, interactive: true })).json;
+    assert.equal((await post(`/api/downloads/${pending.id}/open`)).status, 409, 'only finished files can be opened');
+  });
+
+  await t.test('dialog page is served with CSP and the token', async () => {
+    const r = await request(port, { path: '/dialog.html' });
+    assert.equal(r.status, 200);
+    assert.match(r.headers['content-security-policy'], /script-src 'self'/);
+    assert.match(r.body, /Download File Info/);
+  });
+});
+
 test('queue limits concurrency and survives a restart', async (t) => {
   const origin = await startOrigin();
   t.after(() => origin.close());
-  const first = await startApp({ maxActive: 2 });
+  const first = await startApp({ settings: { maxActive: 2 } });
   const { port } = first;
 
   const ids = [];
@@ -162,7 +257,7 @@ test('queue limits concurrency and survives a restart', async (t) => {
 
   // Restart: running downloads come back paused, with their progress kept on disk.
   await first.app.close();
-  const second = createApp({ token: TOKEN, home: first.home, saveDir: first.saveDir, maxActive: 2 });
+  const second = createApp({ token: TOKEN, home: first.home, saveDir: first.saveDir, settings: { maxActive: 2 } });
   await new Promise(r => second.server.listen(0, '127.0.0.1', r));
   t.after(() => second.close());
   const restored = second.queue.list();

@@ -2,22 +2,26 @@
 
 // Download queue: limits concurrency, tracks state, persists to disk.
 // Request headers (cookies) are kept in memory only and never written to disk.
+//
+// Statuses: pending (waiting for the "Download File Info" dialog), queued,
+// starting, downloading, paused, done, error, cancelled.
 
 const { EventEmitter } = require('events');
 const { randomUUID } = require('crypto');
 const fs = require('fs');
 const fsp = require('fs/promises');
 const path = require('path');
-const { download, filenameFromUrl, sanitize } = require('./downloader');
+const { download, inspect, filenameFromUrl, sanitize } = require('./downloader');
+const { Settings } = require('./settings');
 
 const ACTIVE = new Set(['starting', 'downloading']);
 
 class Queue extends EventEmitter {
-  constructor({ saveDir, stateFile, maxActive = 3, downloadOptions = {} }) {
+  constructor({ saveDir, stateFile, settings, downloadOptions = {} }) {
     super();
     this.saveDir = saveDir;
     this.stateFile = stateFile;
-    this.maxActive = maxActive;
+    this.settings = settings || new Settings(null, saveDir);
     this.downloadOptions = downloadOptions;
     this.items = new Map();
     this.secrets = new Map();      // id -> request headers
@@ -33,6 +37,7 @@ class Queue extends EventEmitter {
     for (const item of saved) {
       // Interrupted by a restart: hold it so the user can resume. The headers are gone.
       if (ACTIVE.has(item.status)) Object.assign(item, { status: 'paused', speed: 0, connections: 0 });
+      item.inspecting = false;
       this.items.set(item.id, item);
     }
     setImmediate(() => this.pump());
@@ -46,17 +51,26 @@ class Queue extends EventEmitter {
     return this.items.get(id);
   }
 
-  add({ url, filename, headers }) {
+  // interactive: added from the browser or UI, so the "Download File Info"
+  // dialog is shown first when that setting is on.
+  add({ url, filename, headers, interactive = false }) {
     const u = new URL(url); // throws on garbage
     if (u.protocol !== 'http:' && u.protocol !== 'https:') throw new Error('only http and https URLs are supported');
+    const ask = interactive && this.settings.get().askWhereToSave;
     const id = randomUUID();
+    const name = filename ? sanitize(filename) : (filenameFromUrl(u.href) || u.hostname);
     const item = {
       id,
       url: u.href,
       requestedName: filename ? sanitize(filename) : null,
-      filename: filename ? sanitize(filename) : (filenameFromUrl(u.href) || u.hostname),
+      filename: name,
+      category: this.settings.categorize(name).id,
+      dir: null,
       dest: null,
-      status: 'queued',
+      mime: '',
+      status: ask ? 'pending' : 'queued',
+      inspecting: ask,
+      inspectError: null,
       size: 0,
       received: 0,
       progress: 0,
@@ -70,6 +84,39 @@ class Queue extends EventEmitter {
     if (headers && Object.keys(headers).length) this.secrets.set(id, headers);
     this.emit('update', { ...item });
     this.persist();
+    if (ask) this.inspectItem(item);
+    else this.pump();
+    return { ...item };
+  }
+
+  // Fills in name, size, type, category and folder for the dialog.
+  async inspectItem(item) {
+    const patch = { inspecting: false };
+    try {
+      const info = await inspect(item.url, { headers: this.secrets.get(item.id) });
+      Object.assign(patch, { size: info.size, mime: info.mime });
+      if (!item.requestedName) patch.filename = info.filename;
+    } catch (err) {
+      patch.inspectError = err.message;
+    }
+    const cat = this.settings.categorize(patch.filename || item.filename, patch.mime || item.mime);
+    if (!this.items.has(item.id) || item.status !== 'pending') return;
+    this.update(item, { ...patch, category: cat.id, dir: item.dir || cat.folder });
+  }
+
+  // The user's answer to the dialog: name, folder, and start now or later.
+  confirm(id, { filename, dir, category, start = true } = {}) {
+    const item = this.items.get(id);
+    if (!item) return null;
+    if (item.status !== 'pending') throw Object.assign(new Error('download is not waiting for confirmation'), { status: 409 });
+    if (typeof dir !== 'string' || !path.isAbsolute(dir.trim())) throw Object.assign(new Error('choose a full folder path'), { status: 400 });
+    const patch = { dir: path.normalize(dir.trim()), status: start ? 'queued' : 'paused', inspecting: false };
+    if (typeof filename === 'string' && filename.trim()) {
+      patch.requestedName = sanitize(filename.trim());
+      patch.filename = patch.requestedName;
+    }
+    if (typeof category === 'string' && this.settings.get().categories.some(c => c.id === category)) patch.category = category;
+    this.update(item, patch);
     this.pump();
     return { ...item };
   }
@@ -86,7 +133,7 @@ class Queue extends EventEmitter {
 
   pump() {
     const queued = [...this.items.values()].filter(i => i.status === 'queued').sort((a, b) => a.addedAt - b.addedAt);
-    let free = this.maxActive - this.activeCount();
+    let free = this.settings.get().maxActive - this.activeCount();
     for (const item of queued) {
       if (free-- <= 0) break;
       this.run(item);
@@ -99,14 +146,21 @@ class Queue extends EventEmitter {
     this.update(item, { status: 'starting', error: null, speed: 0 });
     try {
       const result = await download(
-        { url: item.url, filename: item.requestedName, headers: this.secrets.get(item.id), dest: item.dest },
+        { url: item.url, filename: item.requestedName, headers: this.secrets.get(item.id), dir: item.dir, dest: item.dest },
         {
+          maxConnections: this.settings.get().maxConnections,
           ...this.downloadOptions,
           saveDir: this.saveDir,
+          resolveDir: (name, mime) => this.settings.categorize(name, mime).folder,
           signal: ac.signal,
           onProgress: (p) => {
             const first = item.dest !== p.dest;
-            this.update(item, { status: 'downloading', ...p }, first);
+            const patch = { status: 'downloading', ...p };
+            if (first) {
+              patch.dir = path.dirname(p.dest);
+              patch.category = item.dir ? item.category : this.settings.categorize(p.filename).id;
+            }
+            this.update(item, patch, first);
           }
         }
       );
@@ -202,7 +256,9 @@ class Queue extends EventEmitter {
   async flush() {
     if (!this.stateFile) return;
     const tmp = `${this.stateFile}.${process.pid}.tmp`;
-    await fsp.writeFile(tmp, JSON.stringify(this.list(), null, 2));
+    // segments and inspecting are live-only details
+    const items = this.list().map(({ segments, inspecting, ...rest }) => rest);
+    await fsp.writeFile(tmp, JSON.stringify(items, null, 2));
     await fsp.rename(tmp, this.stateFile);
   }
 

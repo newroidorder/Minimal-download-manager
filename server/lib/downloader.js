@@ -132,17 +132,19 @@ async function writeJsonAtomic(file, data) {
 }
 
 /**
- * Downloads job.url into saveDir.
+ * Downloads job.url.
  *
- * job: { url, filename?, headers?, dest? }. When dest is set and its
- * .part/.part.json exist, the download resumes from the saved segment map.
+ * job: { url, filename?, headers?, dir?, dest? }. The folder is job.dir, else
+ * resolveDir(filename, mime) once the name is known, else saveDir. When dest
+ * is set and its .part/.part.json exist, the download resumes from the saved
+ * segment map.
  *
  * Resolves to { status: 'done' | 'paused' | 'cancelled', dest, size }.
  * Pause and cancel are requested with signal.abort('paused') or
  * signal.abort('cancelled'). Any other failure rejects. If the server supports
  * ranges, the .part file is kept and err.dest is set, so a retry resumes.
  */
-async function download(job, { saveDir, signal, onProgress = () => {}, ...overrides } = {}) {
+async function download(job, { saveDir, resolveDir, signal, onProgress = () => {}, ...overrides } = {}) {
   const o = { ...DEFAULTS, ...overrides };
   const headers = job.headers || {};
   const inner = new AbortController();
@@ -170,11 +172,12 @@ async function download(job, { saveDir, signal, onProgress = () => {}, ...overri
 
   // State records only bytes that are actually written (seg.written), never
   // bytes that are merely claimed (seg.pos). That keeps it safe after a crash.
+  // Finished segments are kept too, so the segment bar still shows them after a resume.
   const saveState = () => {
     if (!canRange || !dest) return saving;
     const snapshot = {
       url: job.url, size, validator,
-      segments: segments.filter(s => s.written <= s.end).map(s => ({ pos: s.written, end: s.end }))
+      segments: segments.map(s => ({ start: s.start, pos: s.written, end: s.end }))
     };
     saving = saving.then(() => writeJsonAtomic(statePath(), snapshot)).catch(() => {});
     return saving;
@@ -191,7 +194,9 @@ async function download(job, { saveDir, signal, onProgress = () => {}, ...overri
     onProgress({
       dest, filename: path.basename(dest), size, received, speed,
       connections: segments.filter(s => s.active).length,
-      progress: size ? Math.min(99, Math.floor(received / size * 100)) : 0
+      progress: size ? Math.min(99, Math.floor(received / size * 100)) : 0,
+      // [start, written, end) per segment, for an IDM-style connection bar
+      segments: size ? segments.map(s => [s.start, s.written, s.end + 1]) : []
     });
   };
 
@@ -199,11 +204,11 @@ async function download(job, { saveDir, signal, onProgress = () => {}, ...overri
     // 1. Try to resume from a saved segment map.
     if (dest) {
       const state = await readState(statePath());
-      const pending = state?.url === job.url && state.size && state.segments?.length && fs.existsSync(partPath())
+      const saved = state?.url === job.url && state.size && Array.isArray(state.segments) && fs.existsSync(partPath())
         ? state.segments
-        : null;
-      if (pending) {
-        const first = pending[0];
+        : [];
+      const first = saved.find(s => s.pos <= s.end);
+      if (first) {
         const h = { ...headers, Range: `bytes=${first.pos}-${first.end}` };
         if (state.validator) h['If-Range'] = state.validator;
         const r = await open(job.url, h, inner.signal, o);
@@ -212,8 +217,8 @@ async function download(job, { saveDir, signal, onProgress = () => {}, ...overri
           size = state.size;
           canRange = true;
           validator = state.validator;
-          segments = pending.map(s => ({ pos: s.pos, written: s.pos, end: s.end, active: false }));
-          received = size - segments.reduce((n, s) => n + (s.end - s.pos + 1), 0);
+          segments = saved.map(s => ({ start: s.start ?? s.pos, pos: s.pos, written: s.pos, end: s.end, active: false }));
+          received = size - segments.reduce((n, s) => n + Math.max(0, s.end - s.pos + 1), 0);
           firstRes = r.res;
           finalUrl = r.url;
           finalHeaders = r.headers;
@@ -241,10 +246,13 @@ async function download(job, { saveDir, signal, onProgress = () => {}, ...overri
         const name = sanitize(job.filename
           || filenameFromDisposition(probe.res.headers['content-disposition'])
           || filenameFromUrl(finalUrl));
-        ({ dest, fd } = await createPart(saveDir, name));
+        const mime = (probe.res.headers['content-type'] || '').split(';')[0].trim().toLowerCase();
+        const dir = job.dir || (resolveDir && resolveDir(name, mime)) || saveDir;
+        await fsp.mkdir(dir, { recursive: true });
+        ({ dest, fd } = await createPart(dir, name));
       }
       if (size) await fd.truncate(size);
-      segments = [{ pos: 0, written: 0, end: size ? size - 1 : Infinity, active: false }];
+      segments = [{ start: 0, pos: 0, written: 0, end: size ? size - 1 : Infinity, active: false }];
       received = 0;
     }
 
@@ -307,13 +315,14 @@ async function download(job, { saveDir, signal, onProgress = () => {}, ...overri
       }
       if (!best) return null;
       const mid = best.pos + Math.floor((best.end - best.pos + 1) / 2);
-      const seg = { pos: mid, written: mid, end: best.end, active: true };
+      const seg = { start: mid, pos: mid, written: mid, end: best.end, active: true };
       best.end = mid - 1;
       segments.push(seg);
       return seg;
     }
 
-    const unassigned = segments.slice(1); // only non-empty when resuming
+    // Unfinished segments first (several when resuming), then steal.
+    const unassigned = segments.filter(s => s.pos <= s.end);
     const next = () => unassigned.shift() || (canRange ? steal() : null);
 
     async function worker(seg, res) {
@@ -324,7 +333,7 @@ async function download(job, { saveDir, signal, onProgress = () => {}, ...overri
       }
     }
 
-    const workers = [worker(segments[0], firstRes)];
+    const workers = [worker(unassigned.shift(), firstRes)];
     while (workers.length < o.maxConnections) {
       const seg = next();
       if (!seg) break;
@@ -377,4 +386,20 @@ async function download(job, { saveDir, signal, onProgress = () => {}, ...overri
   }
 }
 
-module.exports = { download, sanitize, filenameFromDisposition, filenameFromUrl, HttpError };
+// Reads a file's name, size and type without downloading it (for the
+// "Download File Info" dialog). The probe connection is closed right away.
+async function inspect(url, { headers = {}, signal, ...overrides } = {}) {
+  const o = { ...DEFAULTS, ...overrides };
+  const { res, url: finalUrl } = await open(url, { ...headers, Range: 'bytes=0-' }, signal, o);
+  res.destroy();
+  const cr = res.statusCode === 206 && parseContentRange(res.headers['content-range']);
+  const canRange = !!(cr && cr.start === 0 && cr.total);
+  return {
+    filename: sanitize(filenameFromDisposition(res.headers['content-disposition']) || filenameFromUrl(finalUrl)),
+    size: canRange ? cr.total : (res.statusCode === 200 && parseInt(res.headers['content-length'], 10)) || 0,
+    mime: (res.headers['content-type'] || '').split(';')[0].trim().toLowerCase(),
+    canRange
+  };
+}
+
+module.exports = { download, inspect, sanitize, filenameFromDisposition, filenameFromUrl, HttpError };

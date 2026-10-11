@@ -45,10 +45,19 @@ export async function sendToServer({ url, filename, referrer }) {
   const s = await getSettings();
   if (!s.token) throw new Error('No server token set. Open the extension options.');
   const headers = await buildHeaders(url, referrer);
-  const r = await api('/api/downloads', { method: 'POST', body: JSON.stringify({ url, filename: filename || undefined, headers }) }, s);
+  // interactive: the server may ask where to save, via its dialog window.
+  const r = await api('/api/downloads', { method: 'POST', body: JSON.stringify({ url, filename: filename || undefined, headers, interactive: true }) }, s);
   const body = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(body.error || `server answered ${r.status}`);
+  if (body.dialogUrl) openDialog(s.server.replace(/\/+$/, '') + body.dialogUrl);
   return body;
+}
+
+// IDM-style small window: "Download File Info", then progress, then "complete".
+export function openDialog(url) {
+  const width = 560;
+  const height = 520;
+  return chrome.windows.create({ url, type: 'popup', width, height, focused: true }).catch(() => chrome.tabs.create({ url }));
 }
 
 export function fmtBytes(n) {

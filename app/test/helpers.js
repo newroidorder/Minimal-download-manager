@@ -108,12 +108,25 @@ function startOrigin() {
         res.writeHead(200, { 'Content-Length': 5 });
         return res.end('hello');
       // Pages and files for the browser end-to-end test.
+      // Opens like a normal visit and clicks a link by itself (no automation attached).
+      case (req.url.startsWith('/auto-click?') ? req.url : null): {
+        const href = new URL(req.url, 'http://x').searchParams.get('href') || '/';
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        return res.end(`<!doctype html><a id="go" href="${href.replace(/[<>"&]/g, '')}">go</a><script>setTimeout(() => document.getElementById('go').click(), 1500)</script>`);
+      }
       case '/page.html':
         res.writeHead(200, { 'Content-Type': 'text/html', 'Set-Cookie': 'sid=httponly-secret; HttpOnly; Path=/' });
         return res.end(`<!doctype html><title>e2e</title>
           <a id="zip" href="/files/archive.zip">archive</a>
           <a id="dl" href="/dl?id=1">report</a>
+          <a id="noname" href="/get/82ec09e7-20a2-4e0f">project</a>
           <video id="v" src="/files/video.mp4" muted preload="auto"></video>`);
+      // Like GitHub release assets and S3: an ID in the address, the real name
+      // only in Content-Disposition, and a generic type.
+      case '/get/82ec09e7-20a2-4e0f':
+        res.setHeader('Content-Disposition', 'attachment; filename="project.zip"');
+        res.setHeader('Content-Type', 'binary/octet-stream');
+        return serveRange(req, res);
       case '/files/archive.zip':
       case '/files/video.mp4':
       case '/dl?id=1': {

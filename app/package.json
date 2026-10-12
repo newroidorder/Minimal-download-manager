@@ -1,7 +1,7 @@
 {
   "name": "minimal-download-manager",
   "productName": "Minimal Download Manager",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "private": true,
   "description": "Minimal Download Manager: a download manager for Windows modelled on Internet Download Manager",
   "main": "main/index.js",

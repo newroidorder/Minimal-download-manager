@@ -58,6 +58,17 @@ test('manager', async (t) => {
     assert.equal(settings.categorize('x.pdf').folder, chosen, 'remember the last folder used for Documents');
   });
 
+  await t.test('an ID from the address gives way to the server\'s file name', async () => {
+    const { m } = make();
+    const { item } = m.add({ url: U('/get/82ec09e7-20a2-4e0f'), filename: '82ec09e7-20a2-4e0f', interactive: true });
+    const info = await waitFor(() => { const i = m.get(item.id); return !i.inspecting && i; });
+    assert.equal(info.filename, 'project.zip');
+    assert.equal(info.category, 'compressed');
+    const named = m.add({ url: U('/get/82ec09e7-20a2-4e0f'), filename: 'mine.zip', interactive: true, duplicate: 'number' }).item;
+    const kept = await waitFor(() => { const i = m.get(named.id); return !i.inspecting && i; });
+    assert.equal(kept.filename, 'mine.zip', 'a real name the browser gave is kept');
+  });
+
   await t.test('"Download Later" puts it in the main queue; starting the queue runs files in order', async () => {
     const { m, status, events } = make();
     const a = m.add({ url: U('/small.txt'), filename: 'a.txt', start: false }).item;

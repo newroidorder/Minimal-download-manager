@@ -274,13 +274,48 @@ async function shot(page, name) {
       assert.match(await main.textContent('#stBridge'), /Connected: Google Chrome/, 'the status bar says so');
     });
 
+    // Downloads the browser starts on its own are taken while the browser is
+    // choosing the file name, before its "Save as" window. Playwright switches
+    // that step off, so these run in a plain Chromium (with "Ask where to save
+    // each file" on), started like a user would.
+    let chromium = null;
+    const plainProfile = fs.mkdtempSync(path.join(os.tmpdir(), 'mini-idm-plain-'));
+    const browserDownloads = path.join(plainProfile, 'saved');
+    const openInChromium = (href) => {
+      const args = [`--user-data-dir=${plainProfile}`, '--no-first-run', '--no-default-browser-check', '--password-store=basic',
+        ...(process.getuid?.() === 0 ? ['--no-sandbox'] : []),
+        `--disable-extensions-except=${EXTENSION}`, `--load-extension=${EXTENSION}`, `${origin.base}/auto-click?href=${encodeURIComponent(href)}`];
+      const child = require('child_process').spawn(pw.chromium.executablePath(), args, { stdio: 'ignore', env: { ...process.env, XDG_CONFIG_HOME: xdg } });
+      if (!chromium) chromium = child;
+    };
+
+    await check('a download with only an ID in its address: real name, no "Save as" from the browser', async () => {
+      fs.mkdirSync(path.join(plainProfile, 'Default'), { recursive: true });
+      fs.mkdirSync(path.join(plainProfile, 'NativeMessagingHosts'), { recursive: true });
+      fs.copyFileSync(path.join(nativeDirs[0], 'com.minimaldm.bridge.json'), path.join(plainProfile, 'NativeMessagingHosts', 'com.minimaldm.bridge.json'));
+      fs.writeFileSync(path.join(plainProfile, 'Default', 'Preferences'), JSON.stringify({ download: { prompt_for_download: true, default_directory: browserDownloads } }));
+      openInChromium('/get/82ec09e7-20a2-4e0f');
+      const dl = await win('/download.html');
+      await dl.waitForSelector('#ask:not([hidden])');
+      await dl.waitForFunction(() => document.getElementById('filename').value === 'project.zip', null, { timeout: 15_000 });
+      assert.equal(await dl.inputValue('#category'), 'compressed');
+      const item = (await ipc('state')).items.find(i => i.url.includes('/get/'));
+      assert.equal(item.requestedName, 'project.zip', 'the name came from the browser, so it was taken while the browser chose the name');
+      await shot(dl, 'dialog-file-info-id-address');
+      if (SHOTS) require('child_process').execSync(`import -window root ${path.join(SHOTS, 'desktop-no-save-as.png')}`);
+      assert.deepEqual(fs.existsSync(browserDownloads) ? fs.readdirSync(browserDownloads) : [], [], 'the browser saved nothing');
+      await clickClosing(dl, '#cancelAsk');
+      await closed(dl);
+    });
+
     await check('browser extension: a download the browser starts is taken over', async () => {
       await ipc('settings', { downloads: { showFileInfo: false, showProgress: false, showComplete: false } });
-      const page = context.pages().at(-1);
-      await page.click('#dl');
+      openInChromium('/dl?id=1');
       await waitFor(async () => (await ipc('state')).items.some(i => i.url.endsWith('/dl?id=1') && i.status === 'done'), 20_000, 'report.bin done');
       const item = (await ipc('state')).items.find(i => i.url.endsWith('/dl?id=1'));
       assert.equal(path.basename(item.dest), 'report.bin');
+      assert.deepEqual(fs.existsSync(browserDownloads) ? fs.readdirSync(browserDownloads) : [], [], 'the browser saved nothing');
+      chromium?.kill();
       await shot(main, 'main-list');
     });
 

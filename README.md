@@ -19,9 +19,9 @@ connector: it hands your downloads to the program and has nothing to set up.
 
 ## Install
 
-1. Download **Minimal-Download-Manager-Setup-2.2.0.exe** from the [Releases page](../../releases).
+1. Download **Minimal-Download-Manager-Setup-2.2.1.exe** from the [Releases page](../../releases).
    Optionally check it: the release page lists its SHA-256, which PowerShell's
-   `Get-FileHash .\Minimal-Download-Manager-Setup-2.2.0.exe` must match.
+   `Get-FileHash .\Minimal-Download-Manager-Setup-2.2.1.exe` must match.
 2. Run it. The installer isn't code-signed yet (see [Security](#security)), so Windows SmartScreen
    may show "Windows protected your PC": click **More info → Run anyway**.
 3. Minimal Download Manager starts and from then on starts with Windows, sitting in the notification area
@@ -35,9 +35,9 @@ connector: it hands your downloads to the program and has nothing to set up.
 3. That's it. There's nothing to configure in the extension. The status bar in Minimal Download Manager shows
    "Connected: Opera" once the browser has talked to it.
 
-**Updating from 2.1 or older:** after installing, open your browser's extensions page and click the
-reload button (↻) on Minimal Download Manager, or restart the browser. The extension now connects
-through native messaging instead of port 7878.
+**After updating the program:** open your browser's extensions page and click the reload button (↻)
+on Minimal Download Manager (or restart the browser), so the browser picks up the updated extension.
+Since 2.2 the extension connects through native messaging instead of port 7878.
 
 ## What it does (the features from IDM)
 

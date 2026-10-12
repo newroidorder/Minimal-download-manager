@@ -103,6 +103,17 @@ test('capture rules follow the File types tab', () => {
   assert.equal(captureDecision(off, { url: 'https://x.com/private/a.zip', kind: 'auto' }).capture, false);
 });
 
+test('files with only an ID in the address are still recognised', () => {
+  const s = new Settings(null, BASE).get();
+  const auto = (o) => captureDecision(s, { kind: 'auto', url: 'https://cdn.example.com/get/82ec09e7-20a2', ...o }).capture;
+  assert.equal(auto({ filename: 'project.zip' }), true, 'name the browser got from the server');
+  assert.equal(auto({ mime: 'binary/octet-stream' }), true, 'S3 style generic type');
+  assert.equal(auto({ mime: 'application/x-zip' }), true);
+  assert.equal(auto({ mime: 'application/vnd.microsoft.portable-executable' }), true);
+  assert.equal(auto({ mime: 'text/html' }), false);
+  assert.equal(auto({}), false, 'nothing to go on: the browser keeps it');
+});
+
 test('site logins match host, wildcard and path', () => {
   const sites = [
     { site: 'files.example.com', user: 'a', pass: '1' },

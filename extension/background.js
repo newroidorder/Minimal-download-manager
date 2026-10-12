@@ -1,6 +1,6 @@
 // The extension is only a connector, like IDM's: it hands downloads to the
 // Minimal Download Manager program, which decides what to capture (Options > File types).
-// 1. Downloads the browser starts on its own (chrome.downloads.onCreated).
+// 1. Downloads the browser starts on its own (chrome.downloads.onDeterminingFilename).
 // 2. Clicks on file links (content.js), before the browser requests the URL,
 //    so one-time links are not used up.
 // 3. Right-click "Download with Minimal Download Manager".
@@ -40,14 +40,45 @@ chrome.alarms?.onAlarm.addListener((a) => { if (a.name === 'refresh') setup(); e
 
 // ---------- 1. Browser-initiated downloads ----------
 
-chrome.downloads.onCreated.addListener(async (item) => {
+// Taken over while the browser is still choosing the file name, the step
+// before it would show its own "Save as" window. The browser waits for our
+// answer (suggest), so when Minimal Download Manager takes the file, no browser
+// dialog ever opens. item.filename is the name the browser worked out from the
+// server (Content-Disposition), which the address often doesn't have.
+const DECIDE_MS = 8000; // past this the browser goes on; we can still cancel after
+const BACKSTOP_MS = 1500;
+const determined = new Set(); // download ids seen by onDeterminingFilename
+const handled = new Set();    // download ids already offered to the program
+
+chrome.downloads.onDeterminingFilename.addListener((item, suggest) => {
+  determined.add(item.id);
+  let answered = false;
+  const goOn = () => { if (!answered) { answered = true; try { suggest(); } catch { /* download gone */ } } };
+  const timer = setTimeout(goOn, DECIDE_MS);
+  takeOver(item).finally(() => { clearTimeout(timer); goOn(); });
+  return true; // we answer asynchronously
+});
+
+// Backstop for a browser that never asks extensions for the name (automation
+// tools switch it off): take the download over the old way, after it started.
+chrome.downloads.onCreated.addListener((created) => {
+  setTimeout(async () => {
+    if (determined.delete(created.id)) return;
+    const [item] = await chrome.downloads.search({ id: created.id }).catch(() => []);
+    if (item) takeOver(item);
+  }, BACKSTOP_MS);
+});
+
+async function takeOver(item) {
+  if (handled.has(item.id)) return; // the backstop and the normal path both fired
+  handled.add(item.id);
   if (item.byExtensionId === chrome.runtime.id) return; // our own fallback download
   if (item.state !== 'in_progress') return;
   const url = item.finalUrl || item.url;
   if (!/^https?:/i.test(url)) return; // blob:, data:, filesystem: only exist inside the browser
 
-  // Hand off first; cancel only after Minimal Download Manager accepted it. A cancelled
-  // download can't be resumed, so if Minimal Download Manager is closed the browser keeps it.
+  // Hand off first; cancel only after Minimal Download Manager accepted it. If it
+  // is closed (or doesn't want the file), the browser downloads it as usual.
   let accepted = false;
   try {
     accepted = await capture({ url, filename: (item.filename || '').split(/[\\/]/).pop(), mime: item.mime, referrer: item.referrer, kind: 'auto' });
@@ -57,7 +88,7 @@ chrome.downloads.onCreated.addListener(async (item) => {
   if (!accepted) return;
   await chrome.downloads.cancel(item.id).catch(() => {});
   await chrome.downloads.erase({ id: item.id }).catch(() => {});
-});
+}
 
 // ---------- 2. Link clicks and 3. the right-click menu ----------
 

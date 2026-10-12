@@ -41,11 +41,24 @@ function setCategory(id) {
   if (!edited.folder) $('folder').value = cat.folder;
 }
 
+// Selects the name without its extension, so typing replaces just the name.
+function selectName() {
+  const box = $('filename');
+  const dot = box.value.lastIndexOf('.');
+  box.setSelectionRange(0, dot > 0 ? dot : box.value.length);
+}
+
 function renderAsk() {
   show('ask');
   document.title = t('dl.infoTitle');
   $('askUrl').value = item.url;
-  if (!edited.filename && document.activeElement !== $('filename')) $('filename').value = item.filename;
+  // The box has focus from the start, so focus alone doesn't mean "typed in it":
+  // keep taking the server's name until the user actually edits it.
+  if (!edited.filename && $('filename').value !== item.filename) {
+    const focused = document.activeElement === $('filename');
+    $('filename').value = item.filename;
+    if (focused) selectName();
+  }
   if (!edited.category) setCategory(item.category || categoryFor(item.filename).id);
   if (!edited.folder && item.dir) $('folder').value = item.dir;
   if (document.activeElement !== $('description') && !$('description').value) $('description').value = item.description || '';
@@ -206,7 +219,7 @@ async function main() {
   syncSettingsControls();
   item = await idm.invoke('item', ID);
   render();
-  if (view === 'ask') $('filename').focus();
+  if (view === 'ask') { $('filename').focus(); selectName(); }
   idm.on('item', (d) => { if (d.id === ID) { item = d; render(); } });
   idm.on('remove', (d) => { if (d.id === ID) { item = null; render(); } });
   idm.on('settings', (s) => { settings = s; syncSettingsControls(); if (view === 'ask') { const c = $('category').value; fillSelects(); $('category').value = c; } });

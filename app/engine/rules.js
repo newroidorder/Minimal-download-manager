@@ -6,13 +6,18 @@
 const { extOf } = require('./settings');
 
 const MIME_EXT = {
-  'application/zip': 'zip', 'application/x-zip-compressed': 'zip', 'application/x-rar-compressed': 'rar', 'application/vnd.rar': 'rar',
+  'application/zip': 'zip', 'application/x-zip-compressed': 'zip', 'application/x-zip': 'zip', 'multipart/x-zip': 'zip',
+  'application/x-rar': 'rar', 'application/x-msdos-program': 'exe', 'application/x-dosexec': 'exe',
+  'application/vnd.microsoft.portable-executable': 'exe', 'application/x-rar-compressed': 'rar', 'application/vnd.rar': 'rar',
   'application/x-7z-compressed': '7z', 'application/gzip': 'gz', 'application/x-gzip': 'gz', 'application/x-tar': 'tar',
   'application/x-msdownload': 'exe', 'application/x-msi': 'msi', 'application/x-ms-installer': 'msi',
   'application/vnd.android.package-archive': 'apk', 'application/x-iso9660-image': 'iso', 'application/pdf': 'pdf',
   'audio/mpeg': 'mp3', 'audio/mp4': 'm4a', 'audio/wav': 'wav', 'audio/x-wav': 'wav', 'audio/flac': 'flac', 'audio/ogg': 'ogg',
   'video/mp4': 'mp4', 'video/x-matroska': 'mkv', 'video/webm': 'webm', 'video/quicktime': 'mov', 'video/x-msvideo': 'avi'
 };
+
+// Types servers use for "just a file" (S3 sends binary/octet-stream).
+const GENERIC_BINARY = /^(application\/(octet-stream|force-download|x-download|download|binary|x-binary|unknown)|binary\/octet-stream)\b/i;
 
 // "*.example.com" matches example.com and every subdomain; "example.com" matches exactly.
 function hostMatches(pattern, host) {
@@ -46,7 +51,7 @@ function captureDecision(settings, { url, filename, mime, browser, kind }) {
   if (settings.fileTypes.excludeUrls.some(p => urlMatches(p, url))) return { capture: false, reason: 'address excluded' };
   const ext = fileExt({ url, filename, mime });
   // Generic binary with no known extension: IDM still treats it as a file.
-  if (!ext && /^application\/(octet-stream|force-download|x-download)/i.test(mime || '')) return { capture: true };
+  if (!ext && GENERIC_BINARY.test(mime || '')) return { capture: true };
   if (!settings.fileTypes.capture.includes(ext)) return { capture: false, reason: ext ? `.${ext} is not in the file types list` : 'unknown file type' };
   return { capture: true };
 }

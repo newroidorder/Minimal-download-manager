@@ -15,6 +15,7 @@ const path = require('path');
 const { download, inspect, filenameFromUrl, sanitize, HttpError } = require('./downloader');
 const { Limiter } = require('./limiter');
 const { credentialsFor, hostMatches } = require('./rules');
+const { extOf } = require('./settings');
 
 const ACTIVE = new Set(['starting', 'downloading']);
 const BUSY = new Set(['starting', 'downloading', 'scanning']);
@@ -201,6 +202,9 @@ class Manager extends EventEmitter {
       const info = await inspect(item.url, { headers: this.headersFor(item), route: this.route, ...this.downloadOptions });
       Object.assign(patch, { size: info.size, mime: info.mime });
       if (!item.requestedName) patch.filename = info.filename;
+      // A name without an extension (an ID from the address) loses to the
+      // server's real name: "82ec09e7-…" becomes "Setup-2.2.0.exe".
+      else if (!extOf(item.requestedName) && extOf(info.filename)) patch.filename = patch.requestedName = info.filename;
     } catch (err) {
       patch.inspectError = err.message;
     }

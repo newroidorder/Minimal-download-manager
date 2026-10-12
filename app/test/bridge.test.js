@@ -44,7 +44,7 @@ test('browser bridge', async (t) => {
   const capture = (body, headers = ext) => request(port, { method: 'POST', path: '/api/capture', headers, body });
 
   await t.test('the Minimal Download Manager extension needs no setup; everyone else is refused', async () => {
-    assert.deepEqual((await request(port, { path: '/api/ping', headers: { Origin: EXT } })).json, { app: 'mini-idm', version: '2.0.0' });
+    assert.deepEqual((await request(port, { path: '/api/ping', headers: { Origin: EXT } })).json, { app: 'minimal-download-manager', version: '2.0.0' });
     assert.equal((await request(port, { path: '/api/ping' })).status, 401, 'no origin, no token');
     assert.equal((await request(port, { path: '/api/ping', headers: { Origin: 'chrome-extension://abcdefghijklmnopabcdefghijklmnop' } })).status, 403, 'another extension');
     assert.equal((await request(port, { path: '/api/ping', headers: { Origin: 'https://evil.example' } })).status, 403, 'a web page');
@@ -71,7 +71,7 @@ test('browser bridge', async (t) => {
     assert.deepEqual(Object.keys(yes.json).sort(), ['accepted', 'id']);
     assert.equal(yes.json.accepted, true);
     const item = manager.get(yes.json.id);
-    assert.equal(item.status, 'pending', '"Download File Info" will open');
+    assert.equal(item.status, 'pending', 'the "New download" window will open');
     assert.deepEqual(captured.at(-1).req.headers, { Cookie: 'a=1' }, 'only whitelisted headers');
 
     const page = await capture({ url: `${origin.base}/site/index.html`, kind: 'auto', browser: 'opera' });
@@ -158,7 +158,7 @@ test('native messaging bridge', async (t) => {
     const r = await host.request('capture', { url: `${origin.base}/files/native.zip`, kind: 'click', headers: { Cookie: 'sid=1', 'X-Evil': '1' } });
     assert.equal(r.result.accepted, true);
     assert.deepEqual(captured.at(-1).req.headers, { Cookie: 'sid=1' });
-    assert.equal((await host.request('ping')).result.app, 'mini-idm');
+    assert.equal((await host.request('ping')).result.app, 'minimal-download-manager');
 
     // Settings changes reach the extension right away.
     settings.update({ general: { sendCookies: false } });

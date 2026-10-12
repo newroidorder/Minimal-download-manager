@@ -14,7 +14,7 @@ const path = require('path');
 const BODY = crypto.randomBytes(20 * 1024 * 1024);
 const sha256 = (buf) => crypto.createHash('sha256').update(buf).digest('hex');
 
-function tmpDir(prefix = 'mini-idm-test-') {
+function tmpDir(prefix = 'mdm-test-') {
   return fs.mkdtempSync(path.join(os.tmpdir(), prefix));
 }
 

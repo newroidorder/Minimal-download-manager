@@ -1,8 +1,8 @@
-// Options: the same tabs as IDM (General, File types, Save to, Downloads,
+// Options: tabs (General, File types, Save to, Downloads,
 // Connection, Proxy/Socks, Sites and logins, Retry, Sounds). Edits are kept
 // in a working copy and saved together with OK.
 
-import { idm, t, boot, el, catName, showError } from './common.js';
+import { mdm, t, boot, el, catName, showError } from './common.js';
 
 const $ = (id) => document.getElementById(id);
 const BROWSERS = ['chrome', 'edge', 'opera', 'brave', 'vivaldi', 'firefox'];
@@ -139,13 +139,13 @@ function renderSounds() {
     box.addEventListener('change', () => { s.enabled = box.checked; });
     const file = el('td', { class: 'ellipsis', text: s.file || t('opt.o.builtIn'), title: s.file || '' });
     const browse = el('button', { class: 'btn small', text: t('common.browse') });
-    browse.addEventListener('click', async () => { const f = await idm.invoke('pickFile', 'sound'); if (f) { s.file = f; renderSounds(); } });
+    browse.addEventListener('click', async () => { const f = await mdm.invoke('pickFile', 'sound'); if (f) { s.file = f; renderSounds(); } });
     const clear = el('button', { class: 'btn small', text: t('opt.o.builtInShort'), disabled: !s.file });
     clear.addEventListener('click', () => { s.file = ''; renderSounds(); });
     const play = el('button', { class: 'btn small', text: t('opt.o.play') });
     play.addEventListener('click', async () => {
-      await idm.invoke('settings', { sounds: { [ev]: { file: s.file } } }); // test what is chosen now
-      idm.invoke('testSound', ev);
+      await mdm.invoke('settings', { sounds: { [ev]: { file: s.file } } }); // test what is chosen now
+      mdm.invoke('testSound', ev);
     });
     return el('tr', {}, el('td', {}, el('label', { class: 'check' }, box, el('span', { text: t(`opt.o.${ev}`) }))), file,
       el('td', { class: 'nowrap' }, browse, ' ', clear, ' ', play));
@@ -162,22 +162,22 @@ function showSection(sec) {
 async function main() {
   state = await boot();
   S = structuredClone(state.settings);
-  $('extPath').value = await idm.invoke('extensionPath');
+  $('extPath').value = await mdm.invoke('extensionPath');
   load();
-  showSection(['general', 'types', 'save', 'downloads', 'connection', 'proxy', 'sites', 'retry', 'sounds'].includes(idm.params.tab) ? idm.params.tab : 'general');
+  showSection(['general', 'types', 'save', 'downloads', 'connection', 'proxy', 'sites', 'retry', 'sounds'].includes(mdm.params.tab) ? mdm.params.tab : 'general');
 
   for (const b of document.querySelectorAll('#nav button')) b.addEventListener('click', () => showSection(b.dataset.sec));
   for (const b of document.querySelectorAll('[data-reset]')) {
     b.addEventListener('click', async () => {
-      const fresh = await idm.invoke('resetSection', b.dataset.reset);
+      const fresh = await mdm.invoke('resetSection', b.dataset.reset);
       setPath(S, b.dataset.reset, getPath(fresh, b.dataset.reset));
       const n = document.querySelector(`[data-list="${b.dataset.reset}"]`);
       const v = getPath(S, b.dataset.reset);
       n.value = ('upper' in n.dataset ? v.map(x => x.toUpperCase()) : v).join(' ');
     });
   }
-  $('extOpen').addEventListener('click', () => idm.invoke('extensionFolder'));
-  $('extCopy').addEventListener('click', () => idm.invoke('copyText', $('extPath').value));
+  $('extOpen').addEventListener('click', () => mdm.invoke('extensionFolder'));
+  $('extCopy').addEventListener('click', () => mdm.invoke('copyText', $('extPath').value));
 
   $('catNew').addEventListener('click', () => {
     readCat();
@@ -194,8 +194,8 @@ async function main() {
     selCat = null;
     renderCats();
   });
-  $('catBrowse').addEventListener('click', async () => { const p = await idm.invoke('pickFolder', $('catFolder').value); if (p) $('catFolder').value = p; });
-  $('avBrowse').addEventListener('click', async () => { const p = await idm.invoke('pickFile', 'program'); if (p) $('avProgram').value = p; });
+  $('catBrowse').addEventListener('click', async () => { const p = await mdm.invoke('pickFolder', $('catFolder').value); if (p) $('catFolder').value = p; });
+  $('avBrowse').addEventListener('click', async () => { const p = await mdm.invoke('pickFile', 'program'); if (p) $('avProgram').value = p; });
 
   $('exAdd').addEventListener('click', () => {
     const host = $('exHost').value.trim().toLowerCase();
@@ -220,21 +220,21 @@ async function main() {
   });
   $('siteRemove').addEventListener('click', () => { S.sites.splice(selSite, 1); selSite = -1; renderSites(); });
 
-  $('cancel').addEventListener('click', () => idm.invoke('close'));
+  $('cancel').addEventListener('click', () => mdm.invoke('close'));
   $('ok').addEventListener('click', async () => {
     $('error').hidden = true;
     read();
     // New categories are sent by name; the program assigns their id.
     const categories = S.save.categories.map(c => (c.isNew ? { name: c.name, folder: c.folder, exts: c.exts, rememberLast: c.rememberLast } : c));
     try {
-      await idm.invoke('settings', { ...S, save: { ...S.save, categories } });
-      idm.invoke('close');
+      await mdm.invoke('settings', { ...S, save: { ...S.save, categories } });
+      mdm.invoke('close');
     } catch (err) {
       showError($('error'), err);
       if (/folder/i.test(err.message)) showSection('save');
     }
   });
-  idm.on('bridge', (b) => { state.bridge = b; renderBrowsers(); });
+  mdm.on('bridge', (b) => { state.bridge = b; renderBrowsers(); });
 }
 
 main();

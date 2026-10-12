@@ -23,7 +23,7 @@ const T = pt ? {
 
 const $ = (id) => document.getElementById(id);
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
-const openApp = () => chrome.tabs.create({ url: 'miniidm://open' });
+const openApp = () => chrome.tabs.create({ url: 'minimaldm://open' });
 
 async function renderStatus() {
   const info = await ping();

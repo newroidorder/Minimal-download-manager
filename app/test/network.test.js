@@ -1,6 +1,6 @@
 'use strict';
 
-// Proxy support, speed limiter and the Site Grabber against local servers.
+// Proxy support, speed limiter and the Site Explorer against local servers.
 
 const test = require('node:test');
 const assert = require('node:assert');

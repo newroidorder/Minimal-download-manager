@@ -1,6 +1,6 @@
 'use strict';
 
-// Decisions IDM makes from its Options: which browser downloads to capture
+// Decisions made from the Options: which browser downloads to capture
 // (File types tab), and which login to send to which site (Sites & users tab).
 
 const { extOf } = require('./settings');
@@ -50,7 +50,7 @@ function captureDecision(settings, { url, filename, mime, browser, kind }) {
   if (settings.fileTypes.excludeSites.some(p => hostMatches(p, host))) return { capture: false, reason: 'site excluded' };
   if (settings.fileTypes.excludeUrls.some(p => urlMatches(p, url))) return { capture: false, reason: 'address excluded' };
   const ext = fileExt({ url, filename, mime });
-  // Generic binary with no known extension: IDM still treats it as a file.
+  // Generic binary with no known extension: still a file.
   if (!ext && GENERIC_BINARY.test(mime || '')) return { capture: true };
   if (!settings.fileTypes.capture.includes(ext)) return { capture: false, reason: ext ? `.${ext} is not in the file types list` : 'unknown file type' };
   return { capture: true };

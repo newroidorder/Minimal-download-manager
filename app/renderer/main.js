@@ -1,7 +1,7 @@
 // Main window: menu bar, toolbar, category tree, download list, status bar.
 
 import {
-  idm, t, boot, el, icon, hydrateIcons, applyI18n, fmtBytes, fmtSpeed, fmtDate, catName, queueName,
+  mdm, t, boot, el, icon, hydrateIcons, applyI18n, fmtBytes, fmtSpeed, fmtDate, catName, queueName,
   statusText, timeLeft, fileBadge, showMenu, closeMenus
 } from './common.js';
 
@@ -28,13 +28,13 @@ function saveJSON(key, value) {
 }
 
 const $ = (id) => document.getElementById(id);
-const call = (name, ...args) => idm.invoke(name, ...args).catch(err => toastError(err));
+const call = (name, ...args) => mdm.invoke(name, ...args).catch(err => toastError(err));
 const sel = () => [...S.selected].filter(id => S.items.has(id));
 const selItems = () => sel().map(id => S.items.get(id));
 const ACTIVE = new Set(['starting', 'downloading']);
 
 function toastError(err) {
-  const msg = String(err?.message || err).replace(/^Error invoking remote method 'idm': (Error: )?/, '');
+  const msg = String(err?.message || err).replace(/^Error invoking remote method 'mdm': (Error: )?/, '');
   confirmBox({ title: t('common.error'), text: msg, yes: t('common.ok'), noCancel: true });
 }
 
@@ -706,7 +706,7 @@ async function main() {
   $('list').addEventListener('mousedown', (e) => { if (!e.target.closest('.row') && !e.target.closest('.thead')) { S.selected.clear(); paintSelection(); } });
   document.addEventListener('keydown', onKey);
 
-  idm.on('item', (item) => {
+  mdm.on('item', (item) => {
     const prev = S.items.get(item.id);
     S.items.set(item.id, item);
     // Structure changes (new item, status, category, queue) need a full re-render.
@@ -714,19 +714,19 @@ async function main() {
     if (structural || !updateRow(item)) scheduleRender();
     else { renderStatusThrottled(); }
   });
-  idm.on('remove', ({ id }) => { S.items.delete(id); S.selected.delete(id); scheduleRender(); });
-  idm.on('queues', (list) => { S.running = new Set(list); scheduleRender(); });
-  idm.on('settings', (s) => {
+  mdm.on('remove', ({ id }) => { S.items.delete(id); S.selected.delete(id); scheduleRender(); });
+  mdm.on('queues', (list) => { S.running = new Set(list); scheduleRender(); });
+  mdm.on('settings', (s) => {
     const headerChanged = JSON.stringify([s.ui.columns, s.ui.sortBy, s.ui.sortDir]) !== JSON.stringify([S.settings.ui.columns, S.settings.ui.sortBy, S.settings.ui.sortDir]);
     S.settings = s;
     applyLayout();
     if (headerChanged) { rows.clear(); renderHeader(); }
     scheduleRender();
   });
-  idm.on('bridge', (b) => { S.bridge = b; renderStatus(); });
-  idm.on('sound', playSound);
+  mdm.on('bridge', (b) => { S.bridge = b; renderStatus(); });
+  mdm.on('sound', playSound);
   document.addEventListener('i18n', () => { rows.clear(); renderHeader(); scheduleRender(); });
-  setInterval(async () => { S.bridge = await idm.invoke('bridge'); renderStatus(); }, 15_000);
+  setInterval(async () => { S.bridge = await mdm.invoke('bridge'); renderStatus(); }, 15_000);
 }
 
 let statusTimer = null;

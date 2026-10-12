@@ -1,8 +1,8 @@
 'use strict';
 
 // Everything a window can ask the program to do. Calls arrive as
-// idm.invoke(name, ...args) through the 'idm' channel, only from our own
-// app://mini-idm pages.
+// mdm.invoke(name, ...args) through the 'mdm' channel, only from our own
+// app://mdm pages.
 
 const { app, ipcMain, dialog, shell, clipboard, BrowserWindow } = require('electron');
 const fs = require('fs');
@@ -139,7 +139,7 @@ function registerIpc(ctx, { handleResult, openDownload, playSound, quitApp, exte
 
     exportList: async (e) => {
       const r = await dialog.showSaveDialog(BrowserWindow.fromWebContents(e.sender), {
-        defaultPath: 'mini-idm-downloads.txt', filters: [{ name: 'Text', extensions: ['txt'] }]
+        defaultPath: 'download-list.txt', filters: [{ name: 'Text', extensions: ['txt'] }]
       });
       if (r.canceled || !r.filePath) return 0;
       const urls = ctx.manager.list().map(i => i.url);
@@ -172,7 +172,7 @@ function registerIpc(ctx, { handleResult, openDownload, playSound, quitApp, exte
       try {
         return await grab(url, page, {
           depth: Math.min(3, Math.max(0, Number(depth) || 0)), exts, sameSite, signal: ac.signal,
-          onPage: (u, found) => !e.sender.isDestroyed() && e.sender.send('idm:grab', { url: u, found })
+          onPage: (u, found) => !e.sender.isDestroyed() && e.sender.send('mdm:grab', { url: u, found })
         });
       } finally {
         grabs.delete(e.sender.id);
@@ -224,8 +224,8 @@ function registerIpc(ctx, { handleResult, openDownload, playSound, quitApp, exte
     }
   };
 
-  ipcMain.handle('idm', async (e, name, ...args) => {
-    if (!e.senderFrame || !e.senderFrame.url.startsWith('app://mini-idm/')) throw new Error('not allowed');
+  ipcMain.handle('mdm', async (e, name, ...args) => {
+    if (!e.senderFrame || !e.senderFrame.url.startsWith('app://mdm/')) throw new Error('not allowed');
     const fn = handlers[name];
     if (!fn) throw new Error(`unknown action ${name}`);
     return fn(e, ...args);

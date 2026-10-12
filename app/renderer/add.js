@@ -1,5 +1,5 @@
-// "Add URL": the address, plus an optional login like IDM's "Use authorization".
-import { idm, boot, showError, fitWindow } from './common.js';
+// "Add URL": the address, plus an optional login.
+import { mdm, boot, showError, fitWindow } from './common.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -10,8 +10,8 @@ async function submit(e) {
   try {
     if (!/^https?:\/\//i.test(url)) throw new Error('https://…');
     new URL(url);
-    await idm.invoke('add', { url, user: $('useAuth').checked ? $('user').value : '', pass: $('pass').value });
-    idm.invoke('close');
+    await mdm.invoke('add', { url, user: $('useAuth').checked ? $('user').value : '', pass: $('pass').value });
+    mdm.invoke('close');
   } catch (err) {
     showError($('error'), err);
   }
@@ -19,15 +19,15 @@ async function submit(e) {
 
 async function main() {
   await boot();
-  const fromClipboard = await idm.invoke('clipboardUrl');
-  $('url').value = idm.params.url || fromClipboard || '';
+  const fromClipboard = await mdm.invoke('clipboardUrl');
+  $('url').value = mdm.params.url || fromClipboard || '';
   $('url').focus();
   $('url').select();
   $('useAuth').addEventListener('change', () => { $('auth').hidden = !$('useAuth').checked; fitWindow(); });
   fitWindow();
   $('form').addEventListener('submit', submit);
   $('ok').addEventListener('click', submit);
-  $('cancel').addEventListener('click', () => idm.invoke('close'));
+  $('cancel').addEventListener('click', () => mdm.invoke('close'));
   $('url').addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(e); });
 }
 

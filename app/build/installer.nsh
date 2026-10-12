@@ -1,5 +1,5 @@
 ; Uninstall: remove the browser connection the program registered
-; (main/native.js). Settings and the download list stay, as in IDM.
+; (main/native.js). Settings and the download list stay.
 !macro customUnInstall
   DeleteRegKey HKCU "Software\Google\Chrome\NativeMessagingHosts\com.minimaldm.bridge"
   DeleteRegKey HKCU "Software\Chromium\NativeMessagingHosts\com.minimaldm.bridge"

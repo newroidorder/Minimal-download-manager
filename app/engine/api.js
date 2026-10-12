@@ -4,7 +4,7 @@
 // program. The program itself (windows, list, settings) talks to the manager
 // directly, not through here.
 //
-// 1. Native messaging (the normal way, like IDM's IDMMsgHost.exe). The browser
+// 1. Native messaging (the normal way). The browser
 //    starts native/host.js for our extension only, and the host talks to the
 //    program over a private pipe. Both sides of the pipe prove they know the
 //    token in <home>/config.json (see native/protocol.js), so other programs on
@@ -93,7 +93,7 @@ function createBridge({ manager, settings, token, extensionIds = [], version = '
 
   function ping(browser) {
     if (typeof browser === 'string' && BROWSER_RE.test(browser)) onSeen(browser);
-    return { app: 'mini-idm', version };
+    return { app: 'minimal-download-manager', version };
   }
 
   // ---------- 1. private pipe for the native messaging host ----------

@@ -3,7 +3,7 @@
 // The download manager: the list, queues, limits, retries and the rules from
 // Options. The desktop UI and the browser API both drive it.
 //
-// Statuses: pending (waiting for "Download File Info"), queued, starting,
+// Statuses: pending (waiting for the "New download" window), queued, starting,
 // downloading, scanning (antivirus), paused, done, error, cancelled.
 // Request headers (cookies) live in memory only and are never written to disk.
 
@@ -195,7 +195,7 @@ class Manager extends EventEmitter {
     return ex ? ex.max : c.maxConnections;
   }
 
-  // Fills in name, size, type, category and folder for "Download File Info".
+  // Fills in name, size, type, category and folder for the "New download" window.
   async inspectItem(item) {
     const patch = { inspecting: false };
     try {
@@ -213,7 +213,7 @@ class Manager extends EventEmitter {
     this.update(item, { ...patch, category: cat.id, dir: item.dir || cat.folder });
   }
 
-  // The answer to "Download File Info": name, folder, start now or later.
+  // The answer from the "New download" window: name, folder, start now or later.
   confirm(id, { filename, dir, category, start = true, queueId, description } = {}) {
     const item = this.items.get(id);
     if (!item) return null;

@@ -1,9 +1,9 @@
-// One window per download, like IDM: "Download File Info" (name, folder,
+// One window per download: "New download" (name, folder,
 // category), then progress, then "Download complete".
 
-import { idm, t, boot, el, fmtBytes, fmtSpeed, fmtTime, catName, queueName, fileBadge, showError, fitWindow } from './common.js';
+import { mdm, t, boot, el, fmtBytes, fmtSpeed, fmtTime, catName, queueName, fileBadge, showError, fitWindow } from './common.js';
 
-const ID = idm.params.id;
+const ID = mdm.params.id;
 const $ = (id) => document.getElementById(id);
 let settings = null;
 let item = null;
@@ -26,7 +26,7 @@ function categoryFor(filename) {
   return cats().find(c => c.id !== 'general' && ext && c.exts.includes(ext)) || cats().find(c => c.id === 'general');
 }
 
-// ---------- Download File Info ----------
+// ---------- New download ----------
 
 function fillSelects() {
   $('category').replaceChildren(...cats().map(c => el('option', { value: c.id, text: catName(c) })));
@@ -73,13 +73,13 @@ async function confirm(start) {
   const cat = cats().find(c => c.id === category);
   try {
     if (cat && $('remember').checked !== cat.rememberLast) {
-      settings = await idm.invoke('settings', { save: { categories: cats().map(c => (c.id === cat.id ? { ...c, rememberLast: $('remember').checked } : c)) } });
+      settings = await mdm.invoke('settings', { save: { categories: cats().map(c => (c.id === cat.id ? { ...c, rememberLast: $('remember').checked } : c)) } });
     }
-    item = await idm.invoke('confirm', ID, {
+    item = await mdm.invoke('confirm', ID, {
       filename: $('filename').value.trim(), dir: $('folder').value.trim(), category, start,
       queueId: start ? undefined : $('laterQueue').value, description: $('description').value
     });
-    if (!start || !settings.downloads.showProgress) idm.invoke('close');
+    if (!start || !settings.downloads.showProgress) mdm.invoke('close');
     else render();
   } catch (err) {
     showError($('askError'), err);
@@ -93,12 +93,12 @@ $('filename').addEventListener('input', () => {
   if (!edited.category) setCategory(categoryFor($('filename').value).id);
 });
 $('browse').addEventListener('click', async () => {
-  const p = await idm.invoke('pickFolder', $('folder').value);
+  const p = await mdm.invoke('pickFolder', $('folder').value);
   if (p) { $('folder').value = p; edited.folder = true; }
 });
 $('start').addEventListener('click', () => confirm(true));
 $('later').addEventListener('click', () => confirm(false));
-$('cancelAsk').addEventListener('click', async () => { await idm.invoke('remove', [ID]).catch(() => {}); idm.invoke('close'); });
+$('cancelAsk').addEventListener('click', async () => { await mdm.invoke('remove', [ID]).catch(() => {}); mdm.invoke('close'); });
 for (const id of ['filename', 'folder', 'description']) $(id).addEventListener('keydown', (e) => { if (e.key === 'Enter') confirm(true); });
 
 // ---------- progress ----------
@@ -162,13 +162,13 @@ for (const b of document.querySelectorAll('.tabs button')) {
 }
 $('pauseResume').addEventListener('click', () => {
   const running = ['queued', 'starting', 'downloading'].includes(item.status);
-  idm.invoke(running ? 'pause' : 'resume', [ID]);
+  mdm.invoke(running ? 'pause' : 'resume', [ID]);
 });
-$('cancelDl').addEventListener('click', async () => { await idm.invoke('cancel', [ID]); idm.invoke('close'); });
-$('hide').addEventListener('click', () => idm.invoke('close'));
-$('limApply').addEventListener('click', () => idm.invoke('settings', { speedLimit: { enabled: $('limOn').checked, kbps: Number($('limKbps').value) || 1 } }));
-$('limOn').addEventListener('change', () => idm.invoke('settings', { speedLimit: { enabled: $('limOn').checked, kbps: Number($('limKbps').value) || 1 } }));
-$('showComplete').addEventListener('change', () => idm.invoke('settings', { downloads: { showComplete: $('showComplete').checked } }));
+$('cancelDl').addEventListener('click', async () => { await mdm.invoke('cancel', [ID]); mdm.invoke('close'); });
+$('hide').addEventListener('click', () => mdm.invoke('close'));
+$('limApply').addEventListener('click', () => mdm.invoke('settings', { speedLimit: { enabled: $('limOn').checked, kbps: Number($('limKbps').value) || 1 } }));
+$('limOn').addEventListener('change', () => mdm.invoke('settings', { speedLimit: { enabled: $('limOn').checked, kbps: Number($('limKbps').value) || 1 } }));
+$('showComplete').addEventListener('change', () => mdm.invoke('settings', { downloads: { showComplete: $('showComplete').checked } }));
 
 // ---------- complete ----------
 
@@ -185,16 +185,16 @@ function renderComplete() {
 }
 
 const fileAction = async (name) => {
-  const r = await idm.invoke(name, ID);
+  const r = await mdm.invoke(name, ID);
   if (r === 'missing') return showError($('doneError'), t('dl.missing'));
   if (r && r !== 'ok') return showError($('doneError'), r);
-  idm.invoke('close');
+  mdm.invoke('close');
 };
 $('openFile').addEventListener('click', () => fileAction('open'));
 $('openFolder').addEventListener('click', () => fileAction('openFolder'));
-$('closeDone').addEventListener('click', () => idm.invoke('close'));
-$('closeGone').addEventListener('click', () => idm.invoke('close'));
-$('dontShow').addEventListener('change', () => idm.invoke('settings', { downloads: { showComplete: !$('dontShow').checked } }));
+$('closeDone').addEventListener('click', () => mdm.invoke('close'));
+$('closeGone').addEventListener('click', () => mdm.invoke('close'));
+$('dontShow').addEventListener('change', () => mdm.invoke('settings', { downloads: { showComplete: !$('dontShow').checked } }));
 
 // ---------- wiring ----------
 
@@ -217,12 +217,12 @@ async function main() {
   settings = state.settings;
   fillSelects();
   syncSettingsControls();
-  item = await idm.invoke('item', ID);
+  item = await mdm.invoke('item', ID);
   render();
   if (view === 'ask') { $('filename').focus(); selectName(); }
-  idm.on('item', (d) => { if (d.id === ID) { item = d; render(); } });
-  idm.on('remove', (d) => { if (d.id === ID) { item = null; render(); } });
-  idm.on('settings', (s) => { settings = s; syncSettingsControls(); if (view === 'ask') { const c = $('category').value; fillSelects(); $('category').value = c; } });
+  mdm.on('item', (d) => { if (d.id === ID) { item = d; render(); } });
+  mdm.on('remove', (d) => { if (d.id === ID) { item = null; render(); } });
+  mdm.on('settings', (s) => { settings = s; syncSettingsControls(); if (view === 'ask') { const c = $('category').value; fillSelects(); $('category').value = c; } });
   document.addEventListener('i18n', render);
   addEventListener('resize', () => view === 'progress' && drawSegments());
 }

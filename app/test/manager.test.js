@@ -41,7 +41,7 @@ test('manager', async (t) => {
     assert.equal(events.find(e => e.type === 'complete')?.item.id, item.id, 'complete event for the sound / window');
   });
 
-  await t.test('"Download File Info": pending until confirmed, folder remembered per category', async () => {
+  await t.test('"New download": pending until confirmed, folder remembered per category', async () => {
     const { m, settings, home, status } = make();
     const { item } = m.add({ url: U('/attach?id=7'), interactive: true });
     assert.equal(item.status, 'pending');

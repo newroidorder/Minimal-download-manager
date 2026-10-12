@@ -4,7 +4,7 @@
 
 import { ICONS } from './icons.js';
 
-export const idm = window.idm;
+export const mdm = window.mdm;
 let DICT = {};
 export let LANG = 'en';
 
@@ -127,21 +127,21 @@ export function applyFont(settings) {
 
 // Loads state, translation and icons. Every window starts with this.
 export async function boot() {
-  const state = await idm.invoke('state');
+  const state = await mdm.invoke('state');
   setDict(state.lang, state.dict);
   applyFont(state.settings);
   applyI18n();
   hydrateIcons();
-  idm.on('i18n', ({ lang, dict }) => { setDict(lang, dict); applyI18n(); document.dispatchEvent(new Event('i18n')); });
-  idm.on('settings', (s) => applyFont(s));
+  mdm.on('i18n', ({ lang, dict }) => { setDict(lang, dict); applyI18n(); document.dispatchEvent(new Event('i18n')); });
+  mdm.on('settings', (s) => applyFont(s));
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && document.body.classList.contains('dialog') && !document.querySelector('.menu')) idm.invoke('close');
+    if (e.key === 'Escape' && document.body.classList.contains('dialog') && !document.querySelector('.menu')) mdm.invoke('close');
   });
   return state;
 }
 
 export function showError(target, err) {
-  const msg = String(err?.message || err).replace(/^Error invoking remote method 'idm': (Error: )?/, '');
+  const msg = String(err?.message || err).replace(/^Error invoking remote method 'mdm': (Error: )?/, '');
   if (target) { target.textContent = msg; target.hidden = false; }
   fitWindow();
   return msg;
@@ -157,7 +157,7 @@ export function fitWindow() {
     body.style.flex = 'none';
     const h = body.scrollHeight + (foot ? foot.offsetHeight : 0);
     body.style.flex = '';
-    idm.invoke('fit', h);
+    mdm.invoke('fit', h);
   });
 }
 

@@ -1,6 +1,6 @@
 'use strict';
 
-// Site Grabber: explores a web page (and, up to a depth, the pages it links
+// Site Explorer: explores a web page (and, up to a depth, the pages it links
 // to on the same site) and lists the files that match the chosen types.
 
 const { extOf } = require('./settings');

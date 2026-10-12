@@ -1,5 +1,5 @@
-// Scheduler: queues that start and stop on their own, like IDM's.
-import { idm, t, boot, el, fmtBytes, queueName, statusText, LANG, showError } from './common.js';
+// Scheduler: queues that start and stop on their own.
+import { mdm, t, boot, el, fmtBytes, queueName, statusText, LANG, showError } from './common.js';
 
 const $ = (id) => document.getElementById(id);
 let queues = [];           // editable copy
@@ -91,13 +91,13 @@ async function move(delta) {
   const at = list.indexOf(selectedFile);
   if (at < 0 || at + delta < 0 || at + delta >= list.length) return;
   [list[at], list[at + delta]] = [list[at + delta], list[at]];
-  await idm.invoke('reorderQueue', current, list);
+  await mdm.invoke('reorderQueue', current, list);
 }
 
 async function apply() {
   readForm();
   try {
-    const s = await idm.invoke('settings', { queues });
+    const s = await mdm.invoke('settings', { queues });
     queues = structuredClone(s.queues);
     dirty = false;
     return true;
@@ -112,7 +112,7 @@ async function main() {
   queues = structuredClone(state.settings.queues);
   running = new Set(state.queues);
   for (const i of state.items) items.set(i.id, i);
-  current = queues.some(x => x.id === idm.params.queue) ? idm.params.queue : 'main';
+  current = queues.some(x => x.id === mdm.params.queue) ? mdm.params.queue : 'main';
   render();
 
   for (const b of document.querySelectorAll('.tabs button')) {
@@ -135,22 +135,22 @@ async function main() {
   });
   $('deleteQueue').addEventListener('click', async () => {
     if (current === 'main') return;
-    if (state.settings.queues.some(x => x.id === current)) await idm.invoke('deleteQueue', current);
+    if (state.settings.queues.some(x => x.id === current)) await mdm.invoke('deleteQueue', current);
     queues = queues.filter(x => x.id !== current);
     current = 'main';
     render();
   });
   $('up').addEventListener('click', () => move(-1));
   $('down').addEventListener('click', () => move(1));
-  $('unqueue').addEventListener('click', () => selectedFile && idm.invoke('setQueue', [selectedFile], null));
-  $('startNow').addEventListener('click', async () => { if (dirty) await apply(); idm.invoke('startQueue', current); });
-  $('stopNow').addEventListener('click', () => idm.invoke('stopQueue', current));
+  $('unqueue').addEventListener('click', () => selectedFile && mdm.invoke('setQueue', [selectedFile], null));
+  $('startNow').addEventListener('click', async () => { if (dirty) await apply(); mdm.invoke('startQueue', current); });
+  $('stopNow').addEventListener('click', () => mdm.invoke('stopQueue', current));
   $('apply').addEventListener('click', apply);
-  $('close').addEventListener('click', async () => { if (!dirty || await apply()) idm.invoke('close'); });
+  $('close').addEventListener('click', async () => { if (!dirty || await apply()) mdm.invoke('close'); });
 
-  idm.on('queues', (list) => { running = new Set(list); render(); });
-  idm.on('item', (i) => { items.set(i.id, i); renderFiles(); });
-  idm.on('remove', ({ id }) => { items.delete(id); renderFiles(); });
+  mdm.on('queues', (list) => { running = new Set(list); render(); });
+  mdm.on('item', (i) => { items.set(i.id, i); renderFiles(); });
+  mdm.on('remove', ({ id }) => { items.delete(id); renderFiles(); });
 }
 
 main();

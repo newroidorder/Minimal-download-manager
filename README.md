@@ -1,15 +1,14 @@
 # Minimal Download Manager
 
-A download manager for Windows modelled on Internet Download Manager: the same
-layout, menus, Options tabs, categories, queues and scheduler, with a 2026
-Windows 11 look, dark mode
+A fast download manager for Windows: segmented downloads, categories, queues and a
+scheduler, with a Windows 11 look and dark mode.
 
 The **program** does all the work. The small **browser extension** is only a
 connector: it hands your downloads to the program and has nothing to set up.
 
 ![Minimal Download Manager main window](docs/screenshots/main-list.png)
 
-| Download File Info | Progress | Download complete |
+| New download | Progress | Download complete |
 |---|---|---|
 | ![](docs/screenshots/dialog-file-info.png) | ![](docs/screenshots/dialog-progress.png) | ![](docs/screenshots/dialog-complete.png) |
 
@@ -19,13 +18,13 @@ connector: it hands your downloads to the program and has nothing to set up.
 
 ## Install
 
-1. Download **Minimal-Download-Manager-Setup-2.2.1.exe** from the [Releases page](../../releases).
+1. Download **Minimal-Download-Manager-Setup-2.2.2.exe** from the [Releases page](../../releases).
    Optionally check it: the release page lists its SHA-256, which PowerShell's
-   `Get-FileHash .\Minimal-Download-Manager-Setup-2.2.1.exe` must match.
+   `Get-FileHash .\Minimal-Download-Manager-Setup-2.2.2.exe` must match.
 2. Run it. The installer isn't code-signed yet (see [Security](#security)), so Windows SmartScreen
    may show "Windows protected your PC": click **More info → Run anyway**.
 3. Minimal Download Manager starts and from then on starts with Windows, sitting in the notification area
-   (next to the clock). Closing the window keeps it running there, like IDM.
+   (next to the clock). Closing the window keeps it running there.
 
 ### Connect your browser (once)
 
@@ -39,12 +38,12 @@ connector: it hands your downloads to the program and has nothing to set up.
 on Minimal Download Manager (or restart the browser), so the browser picks up the updated extension.
 Since 2.2 the extension connects through native messaging instead of port 7878.
 
-## What it does (the features from IDM)
+## What it does
 
 **Main window**: menu bar (Tasks, File, Downloads, View, Help), toolbar (Add URL, Resume, Stop,
-Stop all, Delete, Delete completed, Options, Scheduler, Start/Stop queue, Grabber), category tree
+Stop all, Delete, Delete completed, Options, Scheduler, Start/Stop queue, Explorer), category tree
 (All downloads → Compressed, Documents, Music, Programs, Video, General; Unfinished; Finished;
-Grabber projects; Queues), sortable and resizable columns (File name, Queue, Size, Status, Time left,
+Explorer projects; Queues), sortable and resizable columns (File name, Queue, Size, Status, Time left,
 Transfer rate, Last try, Description), right-click menu, search, status bar with total speed.
 
 **Downloading**: up to 32 connections per file with dynamic segmentation (a free connection takes
@@ -56,8 +55,8 @@ Minimal Download Manager", and videos/files spotted on the page (listed in the e
 (including HttpOnly) go along so logged-in downloads work; you can switch that off in Options → General.
 Hold **Alt** while clicking to let the browser download instead.
 
-**Menus as in IDM**
-- *Tasks*: Add URL, Add batch download (`img*.jpg` from 1 to 50), Site Grabber, Import/Export list, Exit
+**Menus**
+- *Tasks*: Add URL, Add batch download (`img*.jpg` from 1 to 50), Site Explorer, Import/Export list, Exit
 - *File*: Resume, Stop, Download again, Remove, Open, Open folder, Copy address, Properties
 - *Downloads*: Pause all, Stop all, Delete all completed, Find (Ctrl+F), Find next (F3), Scheduler,
   Start queue ▸, Stop queue ▸, Speed limiter ▸ (on / off / settings), Options
@@ -70,13 +69,13 @@ Hold **Alt** while clicking to let the browser download instead.
 | Tab | What you can set |
 |---|---|
 | General | Start with Windows, clipboard monitoring, which browsers to capture from, the bypass key, the right-click menu, sending cookies, language, theme, extension folder, the old port-7878 connection (off) |
-| File types | Types captured automatically (IDM's default list), sites and addresses never to capture |
+| File types | Types captured automatically, sites and addresses never to capture |
 | Save to | Categories with their folder and file types, new/edit/delete categories, remember last folder, file date from the server |
-| Downloads | Show Download File Info / progress / complete windows, duplicate-address rule, User-Agent, antivirus scan after download (Microsoft Defender by default) |
+| Downloads | Show the New download / progress / complete windows, duplicate-address rule, User-Agent, antivirus scan after download (Microsoft Defender by default) |
 | Connection | Connections per download (1–32), downloads at the same time, per-server exceptions, speed limiter, download limits (X MB every Y hours) |
 | Proxy / Socks | None, Windows settings, automatic script (PAC), or manual HTTP / SOCKS5 with login |
 | Sites and logins | User name and password per site, host, wildcard or path (sent over HTTPS only, stored encrypted) |
-| Retry | Attempts (0 = keep trying) and the wait between them. IDM's dial-up/VPN options aren't needed on modern Windows. |
+| Retry | Attempts (0 = keep trying) and the wait between them |
 | Sounds | Download complete, download failed, queue started, queue finished: built-in tone or your own file |
 
 **Scheduler**: any number of queues; start once or on chosen weekdays at a time, stop at a time,
@@ -84,9 +83,9 @@ N files at once, then do nothing / exit / shut down / sleep; file order inside e
 
 ## Not included
 
-- **Video download buttons and HLS/DASH streams.** That's IDM's most-used extra and the next big step.
+- **Video download buttons and HLS/DASH streams.** The next big step.
 - DRM-protected video (no download manager can legally do this).
-- FTP and MMS, IDM's toolbar button inside web pages, and registration.
+- FTP and MMS, and a download button inside web pages.
 - Firefox: the extension targets Chrome, Edge, Opera, Brave and Vivaldi.
 
 ## For developers
@@ -94,7 +93,7 @@ N files at once, then do nothing / exit / shut down / sleep; file order inside e
 ```
 app/            the Windows program (Electron)
   engine/       download engine: downloader, manager (queues, limits, retries), settings,
-                scheduler, proxy, rules, grabber, batch, browser bridge
+                scheduler, proxy, rules, site explorer (grabber.js), batch, browser bridge
   main/         program shell: windows, tray, start with Windows, IPC, notifications, sounds
   renderer/     the windows (plain HTML/CSS/JS, strict CSP, no Node access)
   locales/      en.json, pt-BR.json
@@ -102,7 +101,7 @@ app/            the Windows program (Electron)
   test/         engine tests (node:test)
   test-e2e/     drives the real program and extension (Playwright)
 extension/      the browser connector (Manifest V3)
-docs/           screenshots, the original analysis prompt and review
+docs/           screenshots
 ```
 
 ```bash
@@ -122,8 +121,7 @@ already released is never replaced: raise the version to publish changes.
 
 ### How the browser connection works
 
-Like IDM (which uses `IDMMsgHost.exe`), the extension talks to the program through **native
-messaging**:
+The extension talks to the program through **native messaging**:
 
 ```
 extension ──native messaging──▶ host (started by the browser) ──private pipe──▶ program

@@ -2,7 +2,7 @@
 // Download Manager program decides what to capture (Options > File types).
 //
 // The program is reached through native messaging (com.minimaldm.bridge, which
-// the program registers on start; like IDM's IDMMsgHost). If the browser can't
+// the program registers on start). If the browser can't
 // start the host, the old 127.0.0.1:7878 connection is tried, which only
 // answers when it is switched on in the program (Options > General).
 

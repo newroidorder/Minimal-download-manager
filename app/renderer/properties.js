@@ -1,13 +1,13 @@
 // Properties: details of one download; the address can be refreshed while it is stopped.
-import { idm, t, boot, fmtBytes, fmtDate, catName, statusText, fileBadge, showError, fitWindow } from './common.js';
+import { mdm, t, boot, fmtBytes, fmtDate, catName, statusText, fileBadge, showError, fitWindow } from './common.js';
 
 const $ = (id) => document.getElementById(id);
-const ID = idm.params.id;
+const ID = mdm.params.id;
 let settings;
 let item;
 
 function render() {
-  if (!item) return idm.invoke('close');
+  if (!item) return mdm.invoke('close');
   $('icon').innerHTML = fileBadge(item.filename, item.category);
   $('name').textContent = item.filename;
   $('sub').textContent = item.mime || '';
@@ -33,21 +33,21 @@ function render() {
 async function main() {
   const state = await boot();
   settings = state.settings;
-  item = await idm.invoke('item', ID);
+  item = await mdm.invoke('item', ID);
   render();
   fitWindow();
-  idm.on('item', (d) => { if (d.id === ID) { item = d; render(); } });
-  idm.on('remove', (d) => { if (d.id === ID) idm.invoke('close'); });
+  mdm.on('item', (d) => { if (d.id === ID) { item = d; render(); } });
+  mdm.on('remove', (d) => { if (d.id === ID) mdm.invoke('close'); });
   $('description').addEventListener('input', () => { $('description').dataset.edited = '1'; });
-  $('open').addEventListener('click', () => idm.invoke('open', ID));
-  $('folder').addEventListener('click', () => idm.invoke('openFolder', ID));
-  $('cancel').addEventListener('click', () => idm.invoke('close'));
+  $('open').addEventListener('click', () => mdm.invoke('open', ID));
+  $('folder').addEventListener('click', () => mdm.invoke('openFolder', ID));
+  $('cancel').addEventListener('click', () => mdm.invoke('close'));
   $('save').addEventListener('click', async () => {
     try {
       const patch = { description: $('description').value };
       if (!$('url').readOnly) patch.url = $('url').value.trim();
-      await idm.invoke('edit', ID, patch);
-      idm.invoke('close');
+      await mdm.invoke('edit', ID, patch);
+      mdm.invoke('close');
     } catch (err) {
       showError($('error'), err);
     }

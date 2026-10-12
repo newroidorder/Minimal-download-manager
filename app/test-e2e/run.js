@@ -41,14 +41,14 @@ async function shot(page, name) {
 
 (async () => {
   const origin = await startOrigin();
-  const home = tmpDir('mini-idm-e2e-');
+  const home = tmpDir('mdm-e2e-');
   const downloads = path.join(home, 'Downloads');
   const port = await freePort();
   fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify({ port, token: 'e2e-token' }));
   // The browser finds the native messaging host in its profile or its config
   // folder (which one depends on the build); the program registers it in all.
-  const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'mini-idm-profile-'));
-  const xdg = fs.mkdtempSync(path.join(os.tmpdir(), 'mini-idm-xdg-'));
+  const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'mdm-profile-'));
+  const xdg = fs.mkdtempSync(path.join(os.tmpdir(), 'mdm-xdg-'));
   const nativeDirs = [path.join(profile, 'NativeMessagingHosts'),
     ...['chromium', 'google-chrome-for-testing', 'google-chrome'].map(d => path.join(xdg, d, 'NativeMessagingHosts'))];
   fs.writeFileSync(path.join(home, 'settings.json'), JSON.stringify({ version: 2, language: LANG, ui: { theme: THEME } }));
@@ -56,7 +56,7 @@ async function shot(page, name) {
   const app = await pw._electron.launch({
     executablePath: require(path.join(APP, 'node_modules', 'electron')),
     args: [APP, ...(process.getuid?.() === 0 ? ['--no-sandbox'] : [])],
-    env: { ...process.env, MINI_IDM_HOME: home, MINI_IDM_SAVE_DIR: downloads, MINI_IDM_NATIVE_DIRS: nativeDirs.join(path.delimiter), ELECTRON_DISABLE_SECURITY_WARNINGS: '1' }
+    env: { ...process.env, MDM_HOME: home, MDM_SAVE_DIR: downloads, MDM_NATIVE_DIRS: nativeDirs.join(path.delimiter), ELECTRON_DISABLE_SECURITY_WARNINGS: '1' }
   });
   const errors = [];
   const watch = (p) => {
@@ -71,7 +71,7 @@ async function shot(page, name) {
   const closed = (page) => waitFor(() => page.isClosed(), 10_000, 'window to close');
   // Buttons that close their own window: click without waiting on the page afterwards.
   const clickClosing = (page, sel) => page.evaluate((q) => document.querySelector(q).click(), sel).catch(() => {});
-  const ipc = (name, ...args) => main.evaluate(([n, a]) => window.idm.invoke(n, ...a), [name, args]);
+  const ipc = (name, ...args) => main.evaluate(([n, a]) => window.mdm.invoke(n, ...a), [name, args]);
   let context;
 
   try {
@@ -82,7 +82,7 @@ async function shot(page, name) {
       await shot(main, 'main-empty');
     });
 
-    await check('Add URL -> Download File Info -> progress -> Download complete', async () => {
+    await check('Add URL -> New download -> progress -> Download complete', async () => {
       await main.click('.tb[data-act="add"]');
       const add = await win('/add.html');
       await add.fill('#url', `${origin.base}/files/archive.zip`);
@@ -144,7 +144,7 @@ async function shot(page, name) {
       await ipc('settings', { language: LANG });
     });
 
-    await check('Downloads menu has the IDM entries; dark mode', async () => {
+    await check('Downloads menu entries; dark mode', async () => {
       await main.click('.menubar button[data-menu="downloads"]');
       const labels = await main.locator('.menu .mi .label').allTextContents();
       for (const want of ['Pause all', 'Stop all', 'Delete all completed', 'Find', 'Find next', 'Scheduler…', 'Start queue', 'Stop queue', 'Speed limiter', 'Options…']) {
@@ -200,7 +200,7 @@ async function shot(page, name) {
       assert.equal(s.items.filter(i => /img\d\d\.jpg$/.test(i.url) && i.queueId === 'main').length, 12);
     });
 
-    await check('Site Grabber explores linked pages and lists matching files', async () => {
+    await check('Site Explorer explores linked pages and lists matching files', async () => {
       await main.click('.tb[data-act="grabber"]');
       const g = await win('/grabber.html');
       await g.fill('#url', `${origin.base}/site/index.html`);
@@ -254,7 +254,7 @@ async function shot(page, name) {
       await page.waitForTimeout(300);
       origin.stats.cookies = [];
       await page.click('#zip');
-      // archive.zip is already in the list, so the program asks first, like IDM.
+      // archive.zip is already in the list, so the program asks first.
       const dup = await win('/duplicate.html');
       await dup.waitForFunction(() => document.getElementById('name').textContent.length > 0);
       await shot(dup, 'dialog-duplicate');
@@ -279,7 +279,7 @@ async function shot(page, name) {
     // that step off, so these run in a plain Chromium (with "Ask where to save
     // each file" on), started like a user would.
     let chromium = null;
-    const plainProfile = fs.mkdtempSync(path.join(os.tmpdir(), 'mini-idm-plain-'));
+    const plainProfile = fs.mkdtempSync(path.join(os.tmpdir(), 'mdm-plain-'));
     const browserDownloads = path.join(plainProfile, 'saved');
     const openInChromium = (href) => {
       const args = [`--user-data-dir=${plainProfile}`, '--no-first-run', '--no-default-browser-check', '--password-store=basic',

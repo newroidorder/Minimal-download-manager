@@ -11,7 +11,7 @@ const { tmpDir } = require('./helpers');
 
 const BASE = path.resolve('/downloads');
 
-test('categories sort files into IDM-style folders', () => {
+test('categories sort files into folders by type', () => {
   const s = new Settings(null, BASE);
   const folder = (name, mime) => s.categorize(name, mime).folder;
   assert.equal(folder('song.mp3'), path.join(BASE, 'Music'));
@@ -51,7 +51,7 @@ test('settings are validated, clamped and saved', () => {
   });
   const v = s.get();
   assert.deepEqual(v.save.categories.find(c => c.id === 'music').exts, ['mp3', 'flac', 'ogg']);
-  assert.equal(v.connection.maxConnections, 32, "IDM's maximum is 32");
+  assert.equal(v.connection.maxConnections, 32, 'the maximum is 32');
   assert.equal(v.connection.maxActive, 1);
   assert.deepEqual(v.connection.exceptions, [{ host: 'slow.example.com', max: 32 }]);
   assert.equal(v.proxy.mode, 'none');

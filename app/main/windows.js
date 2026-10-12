@@ -1,6 +1,6 @@
 'use strict';
 
-// Creates and tracks every window. Pages are served from app://mini-idm/ so
+// Creates and tracks every window. Pages are served from app://mdm/ so
 // they get a real origin (ES modules, strict CSP) instead of file://.
 
 const { BrowserWindow, nativeTheme, shell } = require('electron');
@@ -62,12 +62,12 @@ function create(kind, params = {}, { key = kind, parent, modal = false, show = t
   });
   win.setMenu(null);
   const query = new URLSearchParams(params).toString();
-  win.loadURL(`app://mini-idm/${kind}.html${query ? `?${query}` : ''}`);
+  win.loadURL(`app://mdm/${kind}.html${query ? `?${query}` : ''}`);
   win.once('ready-to-show', () => {
     if (!show) return;
     win.show();
     if (onTop) {
-      // Captured from the browser: come to the front once, like IDM's dialogs.
+      // Captured from the browser: come to the front once.
       win.setAlwaysOnTop(true, 'floating');
       win.focus();
       setTimeout(() => !win.isDestroyed() && win.setAlwaysOnTop(false), 1500);
@@ -99,7 +99,7 @@ function all() {
 }
 
 function broadcast(event, data) {
-  for (const w of all()) w.webContents.send(`idm:${event}`, data);
+  for (const w of all()) w.webContents.send(`mdm:${event}`, data);
 }
 
 function retheme() {

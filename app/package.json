@@ -1,9 +1,9 @@
 {
   "name": "minimal-download-manager",
   "productName": "Minimal Download Manager",
-  "version": "2.2.1",
+  "version": "2.2.2",
   "private": true,
-  "description": "Minimal Download Manager: a download manager for Windows modelled on Internet Download Manager",
+  "description": "Minimal Download Manager: a fast download manager for Windows",
   "main": "main/index.js",
   "scripts": {
     "start": "electron .",
@@ -21,7 +21,7 @@
   },
   "author": "Minimal Download Manager",
   "build": {
-    "appId": "com.miniidm.app",
+    "appId": "com.minimaldm.app",
     "productName": "Minimal Download Manager",
     "copyright": "Minimal Download Manager",
     "directories": {
@@ -53,7 +53,7 @@
       {
         "name": "Minimal Download Manager",
         "schemes": [
-          "miniidm"
+          "minimaldm"
         ]
       }
     ],
@@ -83,7 +83,8 @@
         "pt_BR"
       ],
       "multiLanguageInstaller": true,
-      "include": "build/installer.nsh"
+      "include": "build/installer.nsh",
+      "guid": "cfaf99b6-a7d5-59cb-b2b2-bf69e402a160"
     },
     "publish": null
   }

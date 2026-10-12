@@ -27,8 +27,8 @@ const ROOT = path.join(__dirname, '..');
 const RENDERER = path.join(ROOT, 'renderer');
 const HIDDEN = process.argv.includes('--hidden');
 
-if (process.env.MINI_IDM_HOME) app.setPath('userData', process.env.MINI_IDM_HOME);
-app.setAppUserModelId('com.miniidm.app');
+if (process.env.MDM_HOME) app.setPath('userData', process.env.MDM_HOME);
+app.setAppUserModelId('com.minimaldm.app');
 
 if (!app.requestSingleInstanceLock()) {
   app.quit();
@@ -79,8 +79,7 @@ async function start() {
   });
 
   const home = app.getPath('userData');
-  if (!process.env.MINI_IDM_HOME) migrateOldData(home);
-  const base = process.env.MINI_IDM_SAVE_DIR || app.getPath('downloads');
+  const base = process.env.MDM_SAVE_DIR || app.getPath('downloads');
   const settings = new Settings(path.join(home, 'settings.json'), base, null, { cipher: passwordCipher() });
   ctx.settings = settings;
   applyLanguage();
@@ -119,21 +118,12 @@ async function start() {
     (url) => handleResult(manager.add({ url, interactive: true, kind: 'clipboard' }))
   );
   syncAutostart();
-  if (app.isPackaged) app.setAsDefaultProtocolClient('miniidm');
+  if (app.isPackaged) {
+    app.setAsDefaultProtocolClient('minimaldm');
+    app.removeAsDefaultProtocolClient('miniidm'); // the link type of 2.2.1 and older
+  }
   handleArgs(process.argv);
   setInterval(keepAwake, 5000).unref?.();
-}
-
-// Until 2.1 the program was called "Mini IDM" and kept its data in
-// %APPDATA%\Mini IDM. Copy the list and settings over once.
-function migrateOldData(home) {
-  const old = path.join(app.getPath('appData'), 'Mini IDM');
-  const files = ['settings.json', 'downloads.json', 'config.json'];
-  if (!fs.existsSync(old) || files.some(f => fs.existsSync(path.join(home, f)))) return;
-  fs.mkdirSync(home, { recursive: true });
-  for (const f of files) {
-    try { fs.copyFileSync(path.join(old, f), path.join(home, f)); } catch { /* not there */ }
-  }
 }
 
 // The browser connection: native messaging over a private pipe, plus the old
@@ -151,7 +141,7 @@ function startBridge(home, config) {
     home, pipe, extensionId: EXTENSION_ID,
     exe: process.execPath,
     script: app.isPackaged ? path.join(process.resourcesPath, 'native', 'host.js') : path.join(ROOT, 'native', 'host.js'),
-    extraDirs: (process.env.MINI_IDM_NATIVE_DIRS || '').split(path.delimiter).filter(Boolean)
+    extraDirs: (process.env.MDM_NATIVE_DIRS || '').split(path.delimiter).filter(Boolean)
   }).catch((err) => { ctx.bridgeState.error = `native host: ${err.message}`; });
 
   const syncHttp = () => {
@@ -303,7 +293,7 @@ function playSound(event, force = false) {
       }
     } catch { /* fall back to the built-in sound */ }
   }
-  main.webContents.send('idm:sound', payload);
+  main.webContents.send('mdm:sound', payload);
 }
 
 // ---------- system integration ----------
@@ -335,7 +325,7 @@ function keepAwake() {
 }
 
 function handleArgs(argv) {
-  const link = argv.find(a => /^miniidm:\/\//i.test(a));
+  const link = argv.find(a => /^minimaldm:\/\//i.test(a));
   if (!link) return;
   try {
     const u = new URL(link);

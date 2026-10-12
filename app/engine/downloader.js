@@ -1,6 +1,6 @@
 'use strict';
 
-// Segmented HTTP downloader with IDM-style dynamic segmentation.
+// Segmented HTTP downloader with dynamic segmentation.
 //
 // One probe connection starts at byte 0. Every extra connection takes the back
 // half of the largest remaining segment, and so does any connection that
@@ -207,7 +207,7 @@ async function download(job, { saveDir, resolveDir, signal, onProgress = () => {
       connections: segments.filter(s => s.active).length,
       resumable: canRange,
       progress: size ? Math.min(99, Math.floor(received / size * 100)) : 0,
-      // [start, written, end) per segment, for an IDM-style connection bar
+      // [start, written, end) per segment, for the connection bar
       segments: size ? segments.map(s => [s.start, s.written, s.end + 1]) : []
     });
   };
@@ -403,7 +403,7 @@ async function download(job, { saveDir, resolveDir, signal, onProgress = () => {
 }
 
 // Reads a file's name, size and type without downloading it (for the
-// "Download File Info" dialog). The probe connection is closed right away.
+// "New download" window). The probe connection is closed right away.
 async function inspect(url, { headers = {}, signal, ...overrides } = {}) {
   const o = { ...DEFAULTS, ...overrides };
   const { res, url: finalUrl } = await open(url, { ...headers, Range: 'bytes=0-' }, signal, o);
@@ -418,7 +418,7 @@ async function inspect(url, { headers = {}, signal, ...overrides } = {}) {
   };
 }
 
-// For the Site Grabber: fetches a page and returns its text if it is HTML.
+// For the Site Explorer: fetches a page and returns its text if it is HTML.
 async function fetchPage(url, { headers = {}, signal, maxBytes = 5 * 1024 * 1024, ...overrides } = {}) {
   const o = { ...DEFAULTS, ...overrides };
   const { res, url: finalUrl } = await open(url, headers, signal, o);

@@ -1,13 +1,13 @@
 'use strict';
 
-// All user settings, grouped like IDM's Options tabs. Saved to
+// All user settings, grouped like the Options tabs. Saved to
 // <home>/settings.json. Every value is validated against the defaults, so
 // a damaged or old file can never put the app in a bad state.
 
 const fs = require('fs');
 const path = require('path');
 
-// IDM's default "File types" list for automatic capture.
+// Default "File types" list for automatic capture.
 const CAPTURE_EXTS = ('3gp 7z aac ace aif apk arj asf avi bin bz2 exe gz gzip img iso lzh m4a m4v mkv mov mp3 mp4 '
   + 'mpa mpe mpeg mpg msi msu ogg ogv pdf plj pps ppt qt r0 r1 ra rar rm rmvb sea sit sitx tar tif tiff wav wma wmv z zip '
   + 'flac webm opus xz zst dmg pkg deb rpm appimage msix epub torrent').split(' ');
@@ -54,7 +54,7 @@ function defaults(baseDir) {
       setFileDate: false
     },
     downloads: {
-      showFileInfo: true,       // "Download File Info" before starting
+      showFileInfo: true,       // "New download" window before starting
       showProgress: true,       // progress window
       showComplete: true,       // "Download complete" window
       duplicate: 'ask',         // ask | number | overwrite | resume

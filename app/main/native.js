@@ -1,7 +1,6 @@
 'use strict';
 
-// Registers the native messaging host with the browsers, the way IDM
-// registers IDMMsgHost. Done on every start, so it follows the program if it
+// Registers the native messaging host with the browsers. Done on every start, so it follows the program if it
 // is moved or updated. Per user only: no admin rights needed.
 //
 // <home>/native/

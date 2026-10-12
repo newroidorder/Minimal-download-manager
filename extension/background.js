@@ -1,4 +1,4 @@
-// The extension is only a connector, like IDM's: it hands downloads to the
+// The extension is only a connector: it hands downloads to the
 // Minimal Download Manager program, which decides what to capture (Options > File types).
 // 1. Downloads the browser starts on its own (chrome.downloads.onDeterminingFilename).
 // 2. Clicks on file links (content.js), before the browser requests the URL,
@@ -23,8 +23,8 @@ function menus(config) {
     await chrome.contextMenus.removeAll();
     if (config?.contextMenu === false) return;
     const pt = chrome.i18n.getUILanguage().startsWith('pt');
-    await chrome.contextMenus.create({ id: 'mini-idm-link', title: pt ? 'Baixar com o Minimal Download Manager' : 'Download with Minimal Download Manager', contexts: ['link'] });
-    await chrome.contextMenus.create({ id: 'mini-idm-media', title: pt ? 'Baixar esta mídia com o Minimal Download Manager' : 'Download this media with Minimal Download Manager', contexts: ['video', 'audio'] });
+    await chrome.contextMenus.create({ id: 'mdm-link', title: pt ? 'Baixar com o Minimal Download Manager' : 'Download with Minimal Download Manager', contexts: ['link'] });
+    await chrome.contextMenus.create({ id: 'mdm-media', title: pt ? 'Baixar esta mídia com o Minimal Download Manager' : 'Download this media with Minimal Download Manager', contexts: ['video', 'audio'] });
   }).catch(() => {});
   return menuChain;
 }
@@ -126,7 +126,7 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
 });
 
 chrome.contextMenus.onClicked.addListener((info) => {
-  const url = info.menuItemId === 'mini-idm-link' ? info.linkUrl : info.srcUrl;
+  const url = info.menuItemId === 'mdm-link' ? info.linkUrl : info.srcUrl;
   if (url && /^https?:/i.test(url)) sendOrFallback({ url, referrer: info.pageUrl, kind: 'menu' });
 });
 

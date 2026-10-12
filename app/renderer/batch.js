@@ -1,5 +1,5 @@
 // "Add batch download": one address with * expanded over a range.
-import { idm, t, boot, el, queueName, showError } from './common.js';
+import { mdm, t, boot, el, queueName, showError } from './common.js';
 
 const $ = (id) => document.getElementById(id);
 let urls = [];
@@ -7,7 +7,7 @@ let urls = [];
 async function preview() {
   $('error').hidden = true;
   try {
-    urls = $('pattern').value.trim() ? await idm.invoke('batchExpand', $('pattern').value.trim(), $('from').value.trim(), $('to').value.trim(), $('width').value) : [];
+    urls = $('pattern').value.trim() ? await mdm.invoke('batchExpand', $('pattern').value.trim(), $('from').value.trim(), $('to').value.trim(), $('width').value) : [];
     if (urls.length && !/^https?:\/\//i.test(urls[0])) throw new Error('https://…');
   } catch (err) {
     urls = [];
@@ -25,10 +25,10 @@ async function main() {
   $('ok').disabled = true;
   $('ok').addEventListener('click', async () => {
     const now = document.querySelector('input[name=when]:checked').value === 'now';
-    await idm.invoke('addMany', urls, { start: now, queueId: now ? undefined : $('queue').value });
-    idm.invoke('close');
+    await mdm.invoke('addMany', urls, { start: now, queueId: now ? undefined : $('queue').value });
+    mdm.invoke('close');
   });
-  $('cancel').addEventListener('click', () => idm.invoke('close'));
+  $('cancel').addEventListener('click', () => mdm.invoke('close'));
   $('pattern').focus();
 }
 

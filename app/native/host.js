@@ -1,7 +1,7 @@
 'use strict';
 
 // Native messaging host: the part of Minimal Download Manager the browser
-// starts for our extension (IDM has IDMMsgHost.exe for this). Chrome only
+// starts for our extension. Chrome only
 // starts it for the extension IDs in its manifest. It relays messages between
 // the extension (stdin/stdout) and the program (private pipe), and tells the
 // extension whether the program is running.

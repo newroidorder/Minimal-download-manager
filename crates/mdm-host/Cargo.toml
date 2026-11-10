@@ -1,0 +1,10 @@
+[package]
+name = "mdm-host"
+version.workspace = true
+edition.workspace = true
+description = "Native messaging host: relays the browser extension to Minimal Download Manager"
+
+[dependencies]
+mdm-core = { path = "../mdm-core" }
+tokio = { version = "1", features = ["rt", "net", "io-util", "sync", "time", "macros"] }
+serde_json = "1"

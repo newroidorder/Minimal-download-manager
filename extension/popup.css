@@ -1,0 +1,17 @@
+body { width: 360px; padding: 12px 14px 10px; }
+header { display: flex; align-items: center; gap: 8px; }
+header img { width: 22px; height: 22px; }
+header strong { font-size: 15px; flex: 1; }
+.status { display: flex; align-items: center; gap: 8px; margin: 10px 0 4px; padding: 8px 10px; border-radius: 8px; background: var(--surface); font-size: 12px; }
+.status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
+.status.ok .dot { background: var(--ok); }
+.status.bad .dot { background: var(--bad); }
+.status span { flex: 1; }
+ul { list-style: none; margin: 0; padding: 0; }
+li { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-top: 1px solid var(--border); }
+li:first-child { border-top: 0; }
+.name { flex: 1; min-width: 0; }
+.name div { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.meta { font-size: 11px; color: var(--muted); }
+.empty { color: var(--muted); font-size: 12px; padding: 4px 0; display: block; }
+.foot { color: var(--muted); font-size: 11px; margin: 10px 0 0; }

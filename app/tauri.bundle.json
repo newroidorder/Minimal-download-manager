@@ -1,0 +1,9 @@
+{
+  "bundle": {
+    "resources": {
+      "../extension": "extension",
+      "icons/tray.png": "tray.png",
+      "bin/mdm-host.exe": "mdm-host.exe"
+    }
+  }
+}

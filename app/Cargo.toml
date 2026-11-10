@@ -1,0 +1,35 @@
+[package]
+name = "minimal-download-manager"
+version.workspace = true
+edition.workspace = true
+description = "Minimal Download Manager: a fast download manager for Windows"
+
+[[bin]]
+name = "minimal-download-manager"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+mdm-core = { path = "../crates/mdm-core" }
+tauri = { version = "2", features = ["tray-icon", "image-png"] }
+tauri-plugin-dialog = "2"
+tauri-plugin-notification = "2"
+tauri-plugin-single-instance = "2"
+tauri-plugin-opener = "2"
+tokio = { version = "1", features = ["full"] }
+tokio-util = "0.7"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+url = "2"
+base64 = "0.22"
+arboard = { version = "3", default-features = false }
+aes-gcm = "0.10"
+sys-locale = "0.3"
+chrono = "0.4"
+winreg = "0.55"
+uuid = { version = "1", features = ["v4"] }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_Security_Cryptography", "Win32_System_Power", "Win32_Networking_WinHttp", "Win32_System_Memory", "Win32_System_Threading"] }

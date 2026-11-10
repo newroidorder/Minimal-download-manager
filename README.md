@@ -1,10 +1,10 @@
 # Minimal Download Manager
 
-A fast download manager for Windows: segmented downloads, categories, queues and a
-scheduler, with a Windows 11 look and dark mode.
+A fast, lightweight download manager for Windows: segmented downloads with up to 32 connections,
+categories, queues, a scheduler, browser capture, a Windows 11 look and dark mode.
 
-The **program** does all the work. The small **browser extension** is only a
-connector: it hands your downloads to the program and has nothing to set up.
+The **program** does all the work. The small **browser extension** is only a connector: it hands
+your downloads to the program and has nothing to set up.
 
 ![Minimal Download Manager main window](docs/screenshots/main-list.png)
 
@@ -16,15 +16,44 @@ connector: it hands your downloads to the program and has nothing to set up.
 |---|---|---|
 | ![](docs/screenshots/options-general.png) | ![](docs/screenshots/scheduler.png) | ![](docs/screenshots/main-portuguese.png) ![](docs/screenshots/main-dark.png) |
 
+## New in 3.0: rebuilt in Rust
+
+Version 3.0 is a full rewrite of the program in **Rust** with **Tauri**. It looks and works the same
+as 2.x, but under the hood everything that downloads, saves and talks to the browser is new.
+
+- **About 3.5 MB to download.** The installer no longer carries its own copy of Chromium and Node.js.
+  The windows use Microsoft Edge WebView2, which is already part of Windows 10 and 11.
+- **A native download engine.** Downloads run on Rust's async runtime instead of a JavaScript event loop:
+  - Each part of a file gets its **own connection** (HTTP/1.1), so 8 or 32 connections really are 8
+    or 32 streams.
+  - Data is written to disk in **256 KB batches** straight into place, instead of one disk write per
+    small network packet.
+  - Big files are created as **sparse files**, so Windows doesn't fill gigabytes with zeros before a
+    connection far into the file can start writing.
+- **Safer resume.** Pausing, quitting or losing the network while a resume is still connecting no
+  longer throws away the partly downloaded file.
+- **A tiny browser helper.** The process the browser starts (`mdm-host.exe`, under 1 MB) is now a native program.
+  It no longer starts a script through a batch file and a copy of the app runtime.
+- **Your data comes along.** 3.0 reads the 2.x download list, settings and saved passwords. Downloads
+  paused in 2.x resume where they stopped.
+- **Same windows, same extension.** Nothing to relearn and nothing to reinstall in the browser.
+
 ## Install
 
-1. Download **Minimal-Download-Manager-Setup-2.2.2.exe** from the [Releases page](../../releases).
+1. Download **Minimal-Download-Manager-Setup-3.0.0.exe** from the [Releases page](../../releases).
    Optionally check it: the release page lists its SHA-256, which PowerShell's
-   `Get-FileHash .\Minimal-Download-Manager-Setup-2.2.2.exe` must match.
-2. Run it. The installer isn't code-signed yet (see [Security](#security)), so Windows SmartScreen
+   `Get-FileHash .\Minimal-Download-Manager-Setup-3.0.0.exe` must match.
+2. Run it. The installer isn't code-signed yet (see [Releases](#releases)), so Windows SmartScreen
    may show "Windows protected your PC": click **More info → Run anyway**.
 3. Minimal Download Manager starts and from then on starts with Windows, sitting in the notification area
    (next to the clock). Closing the window keeps it running there.
+
+### Coming from 2.x
+
+Quit 2.x (right-click the tray icon → Exit) and **uninstall it first**. The 3.0 installer is a
+different kind and doesn't replace the old one. Uninstalling keeps your data in
+`%APPDATA%\Minimal Download Manager`, and 3.0 picks it up: your list, settings, categories, queues
+and saved logins. Back that folder up first if you want to be safe.
 
 ### Connect your browser (once)
 
@@ -34,11 +63,41 @@ connector: it hands your downloads to the program and has nothing to set up.
 3. That's it. There's nothing to configure in the extension. The status bar in Minimal Download Manager shows
    "Connected: Opera" once the browser has talked to it.
 
-**After updating the program:** open your browser's extensions page and click the reload button (↻)
-on Minimal Download Manager (or restart the browser), so the browser picks up the updated extension.
-Since 2.2 the extension connects through native messaging instead of port 7878.
+Already connected in 2.x? Just click the reload button (↻) on Minimal Download Manager in your
+browser's extensions page, or restart the browser.
 
-## What it does
+## Features
+
+**Downloading**
+- Up to **32 connections per file** with dynamic segmentation: a free connection takes the back half
+  of the largest part still left, so all connections stay busy until the end.
+- Pause and resume, also after closing the program or restarting Windows.
+- Automatic retry with a wait you choose, plus quick retries for dropped connections. A retry continues from the last byte saved.
+- Direct writing into the final file: no temporary pieces to merge at the end.
+- File names from the server (`Content-Disposition`, including international names). A name that
+  is only an ID in the address gives way to the server's real file name.
+- A new name such as `file (1).zip` when the name is taken, so nothing is ever overwritten by accident.
+- Duplicate addresses: ask, add a numbered copy, overwrite, or resume the existing one.
+- Speed limiter shared by all downloads, and download limits (X MB every Y hours) with a warning.
+- Optional file date from the server, and an optional antivirus scan after each download
+  (Microsoft Defender by default).
+
+**Browser capture**
+- Downloads the browser starts, clicks on file links, right-click **Download with Minimal Download
+  Manager**, and videos/files spotted on the page (listed in the extension's popup).
+- The site's cookies (including HttpOnly) go along so logged-in downloads work; you can switch that
+  off in Options → General. Hold **Alt** while clicking to let the browser download instead.
+- Clipboard monitoring: copy a download link and the New download window opens.
+- `minimaldm://add?url=…` links open the New download window.
+
+**Organising**
+- Categories (Compressed, Documents, Music, Programs, Video, General, plus your own), each with its
+  folder and file types; remembers the last folder per category.
+- Queues with their own order and number of files at once.
+- Scheduler: start a queue once or on chosen weekdays at a time, stop it at a time, then do nothing,
+  exit, shut down or sleep.
+- Batch download (`img*.jpg` from 1 to 50, zero-padded or letters), Site Explorer (finds files of
+  chosen types on a page and the pages it links to), import and export of address lists.
 
 **Main window**: menu bar (Tasks, File, Downloads, View, Help), toolbar (Add URL, Resume, Stop,
 Stop all, Delete, Delete completed, Options, Scheduler, Start/Stop queue, Explorer), category tree
@@ -46,17 +105,8 @@ Stop all, Delete, Delete completed, Options, Scheduler, Start/Stop queue, Explor
 Explorer projects; Queues), sortable and resizable columns (File name, Queue, Size, Status, Time left,
 Transfer rate, Last try, Description), right-click menu, search, status bar with total speed.
 
-**Downloading**: up to 32 connections per file with dynamic segmentation (a free connection takes
-half of the largest remaining part), pause and resume (also after a restart), automatic retry,
-direct writing (no temporary files to merge), duplicate-address handling, file names from the server.
-
-**Browser capture**: downloads the browser starts, clicks on file links, right-click "Download with
-Minimal Download Manager", and videos/files spotted on the page (listed in the extension's popup). The site's cookies
-(including HttpOnly) go along so logged-in downloads work; you can switch that off in Options → General.
-Hold **Alt** while clicking to let the browser download instead.
-
 **Menus**
-- *Tasks*: Add URL, Add batch download (`img*.jpg` from 1 to 50), Site Explorer, Import/Export list, Exit
+- *Tasks*: Add URL, Add batch download, Site Explorer, Import/Export list, Exit
 - *File*: Resume, Stop, Download again, Remove, Open, Open folder, Copy address, Properties
 - *Downloads*: Pause all, Stop all, Delete all completed, Find (Ctrl+F), Find next (F3), Scheduler,
   Start queue ▸, Stop queue ▸, Speed limiter ▸ (on / off / settings), Options
@@ -71,15 +121,14 @@ Hold **Alt** while clicking to let the browser download instead.
 | General | Start with Windows, clipboard monitoring, which browsers to capture from, the bypass key, the right-click menu, sending cookies, language, theme, extension folder, the old port-7878 connection (off) |
 | File types | Types captured automatically, sites and addresses never to capture |
 | Save to | Categories with their folder and file types, new/edit/delete categories, remember last folder, file date from the server |
-| Downloads | Show the New download / progress / complete windows, duplicate-address rule, User-Agent, antivirus scan after download (Microsoft Defender by default) |
+| Downloads | Show the New download / progress / complete windows, duplicate-address rule, User-Agent, antivirus scan after download |
 | Connection | Connections per download (1–32), downloads at the same time, per-server exceptions, speed limiter, download limits (X MB every Y hours) |
 | Proxy / Socks | None, Windows settings, automatic script (PAC), or manual HTTP / SOCKS5 with login |
 | Sites and logins | User name and password per site, host, wildcard or path (sent over HTTPS only, stored encrypted) |
 | Retry | Attempts (0 = keep trying) and the wait between them |
 | Sounds | Download complete, download failed, queue started, queue finished: built-in tone or your own file |
 
-**Scheduler**: any number of queues; start once or on chosen weekdays at a time, stop at a time,
-N files at once, then do nothing / exit / shut down / sleep; file order inside each queue.
+**Languages**: English and Português (Brasil), chosen from Windows or set by hand.
 
 ## Not included
 
@@ -91,20 +140,21 @@ N files at once, then do nothing / exit / shut down / sleep; file order inside e
 ## For developers
 
 ```
-crates/mdm-core/  download engine (Rust): downloader, manager (queues, limits, retries), settings,
+crates/mdm-core/  download engine: downloader, manager (queues, limits, retries, quota), settings,
                   scheduler, proxy, rules, site explorer, batch, browser bridge, pipe protocol
 crates/mdm-host/  native messaging host the browser starts (mdm-host.exe)
 app/              program shell (Tauri 2): windows, tray, start with Windows, IPC, notifications,
                   sounds, DPAPI passwords, WinHTTP proxy
-ui/               the windows (plain HTML/CSS/JS, strict CSP), unchanged from 2.x
+ui/               the windows (plain HTML/CSS/JS, strict CSP)
 extension/        the browser connector (Manifest V3)
+scripts/          installer build
 docs/             screenshots
 ```
 
 Needs Rust (stable, MSVC) and the Visual Studio C++ Build Tools.
 
 ```bash
-cargo test --workspace                       # engine tests: segmentation, resume, queues, quota…
+cargo test --workspace                       # engine tests: segmentation, resume, queues, quota, bridge…
 cargo build --workspace && cargo run -p minimal-download-manager   # run the program (a debug build never touches autostart or browser keys)
 cargo install tauri-cli --version "^2" --locked
 pwsh scripts/build-installer.ps1             # installer in target/release/bundle/nsis
@@ -142,8 +192,8 @@ extension ──native messaging──▶ host (started by the browser) ──pr
 ### Passwords
 
 Passwords in *Sites and logins* and the proxy settings are stored encrypted with Windows DPAPI
-(`enc:` in `settings.json`). Only your Windows user on this PC can decrypt them. Older plain-text
-files are encrypted the first time 2.2 starts. Saved logins are only sent over **HTTPS**. A site
+(`enc:` in `settings.json`). Only your Windows user on this PC can decrypt them. Passwords saved by
+2.x are still read, and are saved in the 3.0 format the next time a setting changes. Saved logins are only sent over **HTTPS**. A site
 entered as `http://…` (for example an old router) is the one exception, and only because you typed
 it that way.
 
@@ -155,7 +205,6 @@ it that way.
 - A signed [build provenance attestation](https://docs.github.com/actions/security-for-github-actions/using-artifact-attestations)
   ties the file to the exact commit and workflow. Check it with
   `gh attestation verify Minimal-Download-Manager-Setup-<version>.exe --owner newroidorder`.
-- The installer is **not code-signed** yet, which is why SmartScreen warns. The workflow signs
-  automatically once a certificate is added as the repository secrets `WINDOWS_CERT` (base64 .pfx)
-  and `WINDOWS_CERT_PASSWORD`. Free signing for open-source projects is available from
-  [SignPath Foundation](https://signpath.org/). Azure Trusted Signing is a low-cost paid option.
+- The installer is **not code-signed** yet, which is why SmartScreen warns. Free signing for
+  open-source projects is available from [SignPath Foundation](https://signpath.org/); Azure Trusted
+  Signing is a low-cost paid option.

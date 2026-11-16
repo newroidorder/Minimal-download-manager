@@ -5,11 +5,10 @@ body.main { display: flex; flex-direction: column; }
 .titlebar {
   height: 40px; flex: none; display: flex; align-items: center; gap: 6px;
   background: var(--surface); padding-left: 12px; padding-right: 12px;
-  -webkit-app-region: drag;
 }
 .brand { display: flex; align-items: center; gap: 8px; font-weight: 600; margin-right: 6px; }
 .brand img { width: 20px; height: 20px; }
-.menubar { display: flex; -webkit-app-region: no-drag; }
+.menubar { display: flex; }
 .menubar button { background: none; border: 0; padding: 5px 10px; border-radius: 4px; }
 .menubar button:hover, .menubar button.open { background: var(--hover); }
 .drag { flex: 1; height: 100%; }

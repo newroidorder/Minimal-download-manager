@@ -48,9 +48,7 @@ impl Manager {
 
     /// Marks the item as starting (so pump counts it) and spawns the download.
     fn start(&self, st: &mut State, id: &str) {
-        if let Some(t) = st.retry.remove(id) {
-            t.abort();
-        }
+        Self::clear_retry(st, id);
         let control = Arc::new(Control::default());
         st.controllers.insert(id.to_string(), control.clone());
         let Some(item) = self.update(st, id, true, |i| {

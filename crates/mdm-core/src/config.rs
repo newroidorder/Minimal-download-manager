@@ -4,11 +4,18 @@
 use base64::Engine;
 use rand::RngCore;
 use serde_json::{json, Value};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 /// The ID that follows from the "key" in extension/manifest.json.
 pub const EXTENSION_ID: &str = "jblggonfekdkfbcfpjfnemnhbofnhfki";
 pub const DEFAULT_PORT: u16 = 7878;
+
+/// The program's data folder; MDM_HOME overrides it (tests, portable use).
+pub fn home_dir() -> PathBuf {
+    std::env::var_os("MDM_HOME")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from(std::env::var_os("APPDATA").unwrap_or_default()).join("Minimal Download Manager"))
+}
 
 pub struct Config {
     pub token: String,

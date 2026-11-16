@@ -14,7 +14,7 @@ mod windows;
 
 use mdm_core::bridge::{Bridge, Hooks};
 use mdm_core::config::{load_config, EXTENSION_ID};
-use mdm_core::http::{build_client, ProxyResolver};
+use mdm_core::http::build_client;
 use mdm_core::manager::{is_busy, AddOpts, AddResult, Item, Manager, ManagerConfig};
 use mdm_core::scheduler::Scheduler;
 use mdm_core::settings::SettingsStore;
@@ -108,7 +108,7 @@ impl Ctx {
         let target = url::Url::parse(link).ok().filter(|u| u.host_str() == Some("add")).and_then(|u| u.query_pairs().find(|(k, _)| k == "url").map(|(_, v)| v.into_owned()));
         match target {
             Some(url) => {
-                let req = AddOpts { url, interactive: true, kind: Some("manual".into()), ..Default::default() };
+                let req = AddOpts { url, interactive: true, ..Default::default() };
                 if let Ok(r) = self.manager.add(req.clone()) {
                     self.handle_result(r, req);
                 }
@@ -119,7 +119,7 @@ impl Ctx {
 
     pub fn apply_proxy(&self) {
         let p = self.settings.get().proxy.clone();
-        self.manager.set_client(build_client(&p, Some(resolver(&self.settings))));
+        self.manager.set_client(build_client(&p, Some(system::proxy_resolver(self.settings.clone()))));
     }
 
     pub fn quit(self: &Arc<Self>) {
@@ -153,16 +153,6 @@ fn resource(app: &AppHandle, name: &str) -> PathBuf {
     }
 }
 
-fn resolver(settings: &Arc<SettingsStore>) -> ProxyResolver {
-    system::proxy_resolver(settings.clone())
-}
-
-fn home_dir() -> PathBuf {
-    std::env::var_os("MDM_HOME")
-        .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from(std::env::var_os("APPDATA").unwrap_or_default()).join("Minimal Download Manager"))
-}
-
 fn host_exe(app: &AppHandle) -> PathBuf {
     let bundled = Some(resource(app, "mdm-host.exe")).filter(|p| p.exists());
     bundled.unwrap_or_else(|| std::env::current_exe().ok().and_then(|e| e.parent().map(|d| d.join("mdm-host.exe"))).unwrap_or_default())
@@ -170,7 +160,7 @@ fn host_exe(app: &AppHandle) -> PathBuf {
 
 fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let handle = app.handle().clone();
-    let home = home_dir();
+    let home = mdm_core::config::home_dir();
     std::fs::create_dir_all(&home)?;
     let base = std::env::var_os("MDM_SAVE_DIR").map(PathBuf::from).or_else(|| app.path().download_dir().ok()).unwrap_or_else(|| home.join("Downloads"));
     let cipher: Arc<dyn mdm_core::settings::Cipher> = Arc::new(cipher::Dpapi::new(&home));
@@ -178,7 +168,7 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let rt = tauri::async_runtime::block_on(async { tokio::runtime::Handle::current() });
     let run_program: mdm_core::manager::RunProgram = Arc::new(|p, a, f| Box::pin(system::run_program(p, a, f)));
     let (manager, rx) = Manager::new(ManagerConfig {
-        client: build_client(&settings.get().proxy, Some(resolver(&settings))),
+        client: build_client(&settings.get().proxy, Some(system::proxy_resolver(settings.clone()))),
         settings: settings.clone(),
         state_file: Some(home.join("downloads.json")),
         run_program: Some(run_program),
@@ -215,7 +205,7 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         move |url| {
             let s = c2.settings.get();
             if mdm_core::rules::capture_decision(&s, &url, None, None, None, "click").capture && c2.manager.find_duplicate(&url).is_none() {
-                let req = AddOpts { url, interactive: true, kind: Some("clipboard".into()), ..Default::default() };
+                let req = AddOpts { url, interactive: true, ..Default::default() };
                 if let Ok(r) = c2.manager.add(req.clone()) {
                     c2.handle_result(r, req);
                 }

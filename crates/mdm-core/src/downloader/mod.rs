@@ -395,10 +395,15 @@ async fn run(job: &Job, o: &Options, ctx: &mut Ctx, cancel: &CancellationToken) 
     Ok(Outcome::Done { dest: sh.dest.clone(), size, last_modified })
 }
 
+/// Deletes "<dest>.part" and "<dest>.part.json".
+pub fn discard_part(dest: &Path) {
+    let _ = std::fs::remove_file(part(dest));
+    let _ = std::fs::remove_file(state_file(dest));
+}
+
 fn remove_part(dest: &Option<PathBuf>) {
     if let Some(d) = dest {
-        let _ = std::fs::remove_file(part(d));
-        let _ = std::fs::remove_file(state_file(d));
+        discard_part(d);
     }
 }
 

@@ -105,7 +105,6 @@ pub fn build_client(p: &Proxy, resolver: Option<ProxyResolver>) -> Client {
             let r = resolver.unwrap();
             b = b.proxy(reqwest::Proxy::custom(move |u| r(u).and_then(|rule| parse_rule(&rule))));
         }
-        "system" => {} // reqwest reads the Windows proxy settings by itself
         _ => b = b.no_proxy(),
     }
     b.build().unwrap_or_default()

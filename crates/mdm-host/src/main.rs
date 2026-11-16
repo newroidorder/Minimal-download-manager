@@ -6,7 +6,6 @@
 use mdm_core::protocol::{nonce, pipe_path, proof, read_native, verify, write_line, write_native, LineReader};
 use serde_json::{json, Value};
 use std::collections::HashMap;
-use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tokio::sync::mpsc;
@@ -42,12 +41,6 @@ fn status(st: &Shared, running: bool, version: Option<&str>) {
     to_browser(&json!({ "type": "status", "running": running, "version": version }));
 }
 
-fn home() -> PathBuf {
-    std::env::var_os("MDM_HOME")
-        .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from(std::env::var_os("APPDATA").unwrap_or_default()).join("Minimal Download Manager"))
-}
-
 /// Connects and authenticates; afterwards the pipe is served in the background.
 async fn connect(st: &Shared) -> bool {
     {
@@ -66,7 +59,7 @@ async fn connect(st: &Shared) -> bool {
 }
 
 async fn handshake(st: Shared) -> bool {
-    let home = home();
+    let home = mdm_core::config::home_dir();
     let pipe = std::env::var("MDM_PIPE").unwrap_or_else(|_| pipe_path(&home));
     let Some(secret) = mdm_core::config::read_token(&home) else { return false };
     let Ok(sock) = tokio::net::windows::named_pipe::ClientOptions::new().open(&pipe) else { return false };
@@ -129,7 +122,7 @@ async fn handshake(st: Shared) -> bool {
 
 async fn from_browser(st: Shared, msg: Value) {
     if msg["type"] == "hello" {
-        if let Some(b) = msg["browser"].as_str().filter(|b| (2..=12).contains(&b.len()) && b.bytes().all(|c| c.is_ascii_lowercase())) {
+        if let Some(b) = msg["browser"].as_str().filter(|b| mdm_core::protocol::browser_ok(b)) {
             st.lock().unwrap().browser = b.to_string();
         }
         if connect(&st).await {

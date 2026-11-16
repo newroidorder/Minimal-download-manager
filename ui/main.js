@@ -2,7 +2,7 @@
 
 import {
   mdm, t, boot, el, icon, hydrateIcons, applyI18n, fmtBytes, fmtSpeed, fmtDate, catName, queueName,
-  statusText, timeLeft, fileBadge, showMenu, closeMenus
+  statusText, timeLeft, fileBadge, showMenu, closeMenus, showError
 } from './common.js';
 
 const S = {
@@ -34,8 +34,7 @@ const selItems = () => sel().map(id => S.items.get(id));
 const ACTIVE = new Set(['starting', 'downloading']);
 
 function toastError(err) {
-  const msg = String(err?.message || err).replace(/^Error invoking remote method 'mdm': (Error: )?/, '');
-  confirmBox({ title: t('common.error'), text: msg, yes: t('common.ok'), noCancel: true });
+  confirmBox({ title: t('common.error'), text: showError(null, err), yes: t('common.ok'), noCancel: true });
 }
 
 // ---------- columns ----------

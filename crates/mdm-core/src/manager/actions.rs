@@ -10,7 +10,7 @@ impl Manager {
         }
     }
 
-    fn clear_retry(st: &mut State, id: &str) {
+    pub(super) fn clear_retry(st: &mut State, id: &str) {
         if let Some(t) = st.retry.remove(id) {
             t.abort();
         }
@@ -192,11 +192,7 @@ impl Manager {
             if item.status == "done" || is_busy(&item.status) {
                 return Err("the address can only change while the download is stopped".into());
             }
-            let parsed = Url::parse(u).map_err(|_| "invalid address".to_string())?;
-            if parsed.scheme() != "http" && parsed.scheme() != "https" {
-                return Err("only http and https addresses are supported".into());
-            }
-            new_url = Some(parsed.to_string());
+            new_url = Some(parse_http_url(u)?.to_string());
         }
         Ok(self.update(&mut st, id, true, |i| {
             if let Some(d) = description {
@@ -377,7 +373,6 @@ impl Manager {
 
 pub(super) fn discard_part(item: &Item) {
     if let Some(d) = &item.dest {
-        let _ = std::fs::remove_file(format!("{d}.part"));
-        let _ = std::fs::remove_file(format!("{d}.part.json"));
+        crate::downloader::discard_part(std::path::Path::new(d));
     }
 }

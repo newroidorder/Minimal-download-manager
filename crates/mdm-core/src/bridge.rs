@@ -9,7 +9,7 @@
 
 use crate::http::Headers;
 use crate::manager::{AddOpts, AddResult, Manager};
-use crate::protocol::{nonce, proof, verify, write_line, LineReader};
+use crate::protocol::{browser_ok, nonce, proof, verify, write_line, LineReader};
 use crate::rules::capture_decision;
 use serde_json::{json, Value};
 use std::collections::HashMap;
@@ -24,10 +24,6 @@ const MAX_BODY: usize = 64 * 1024;
 
 fn ct_eq(a: &[u8], b: &[u8]) -> bool {
     a.len() == b.len() && a.iter().zip(b).fold(0u8, |acc, (x, y)| acc | (x ^ y)) == 0
-}
-
-fn browser_ok(b: &str) -> bool {
-    (2..=12).contains(&b.len()) && b.bytes().all(|c| c.is_ascii_lowercase())
 }
 
 pub struct Hooks {
@@ -124,7 +120,6 @@ impl Bridge {
             filename: str_of("filename").filter(|f| !f.is_empty()).map(String::from),
             headers,
             referrer: Some(str_of("referrer").unwrap_or("").to_string()),
-            kind: Some(kind.to_string()),
             interactive: true,
             ..Default::default()
         };

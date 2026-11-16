@@ -25,6 +25,11 @@ pub fn pipe_path(home: &Path) -> String {
     format!(r"\\.\pipe\minimal-download-manager-{hex}")
 }
 
+/// A browser name as the extension sends it: "chrome", "edge"...
+pub fn browser_ok(b: &str) -> bool {
+    (2..=12).contains(&b.len()) && b.bytes().all(|c| c.is_ascii_lowercase())
+}
+
 pub fn nonce() -> String {
     let mut b = [0u8; 24];
     rand::thread_rng().fill_bytes(&mut b);

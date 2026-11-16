@@ -141,7 +141,7 @@ export async function boot() {
 }
 
 export function showError(target, err) {
-  const msg = String(err?.message || err).replace(/^Error invoking remote method 'mdm': (Error: )?/, '');
+  const msg = String(err?.message || err);
   if (target) { target.textContent = msg; target.hidden = false; }
   fitWindow();
   return msg;

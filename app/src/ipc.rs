@@ -59,7 +59,6 @@ fn add_many(ctx: &Ctx, urls: &[Value], o: &Value) -> usize {
     for url in urls.iter().take(10_000).filter_map(Value::as_str) {
         let req = AddOpts {
             url: url.to_string(),
-            kind: Some("manual".into()),
             start: Some(o["start"] != json!(false)),
             queue_id: o["queueId"].as_str().map(String::from),
             duplicate: Some("number".into()),
@@ -112,7 +111,6 @@ pub async fn mdm(window: WebviewWindow, ctx: State<'_, Arc<Ctx>>, name: String, 
                 description: a0["description"].as_str().map(String::from),
                 headers,
                 interactive: a0["interactive"] != json!(false),
-                kind: Some("manual".into()),
                 start: Some(a0["start"] != json!(false)),
                 queue_id: a0["queueId"].as_str().map(String::from),
                 ..Default::default()
@@ -289,7 +287,6 @@ pub async fn mdm(window: WebviewWindow, ctx: State<'_, Arc<Ctx>>, name: String, 
         "extensionFolder" => { let _ = ctx.app.opener().open_path(ctx.extension_dir().display().to_string(), None::<&str>); Value::Null }
         "extensionPath" => json!(ctx.extension_dir()),
         "copyText" => { system::set_clipboard(&text(a0).chars().take(10_000).collect::<String>()); Value::Null }
-        "proxyTest" => { ctx.apply_proxy(); Value::Null }
 
         "checkUpdates" => {
             let r = m.client().get(format!("https://api.github.com/repos/{REPO}/releases/latest")).header("Accept", "application/vnd.github+json").header("User-Agent", "Minimal-Download-Manager").send().await;

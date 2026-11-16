@@ -62,12 +62,10 @@ pub struct Item {
     pub connections: usize,
     pub error: Option<String>,
     pub description: String,
-    pub kind: String,
     pub retries: u32,
     pub added_at: i64,
     pub last_try_at: Option<i64>,
     pub finished_at: Option<i64>,
-    pub overwrite: bool,
     pub resumable: bool,
     pub segments: Vec<[u64; 3]>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -100,7 +98,6 @@ pub struct AddOpts {
     pub referrer: Option<String>,
     pub description: Option<String>,
     pub interactive: bool,
-    pub kind: Option<String>,
     pub dir: Option<String>,
     pub queue_id: Option<String>,
     pub start: Option<bool>,
@@ -281,10 +278,7 @@ impl Manager {
     }
 
     pub fn add(&self, opts: AddOpts) -> Result<AddResult, String> {
-        let u = Url::parse(opts.url.trim()).map_err(|_| "invalid address".to_string())?;
-        if u.scheme() != "http" && u.scheme() != "https" {
-            return Err("only http and https addresses are supported".into());
-        }
+        let u = parse_http_url(&opts.url)?;
         let href = u.to_string();
         let s = self.0.settings.get();
         let mut overwrite_of: Option<Item> = None;
@@ -328,9 +322,7 @@ impl Manager {
             queue_id,
             inspecting: ask,
             description: opts.description.as_deref().unwrap_or("").chars().take(500).collect(),
-            kind: opts.kind.clone().unwrap_or_else(|| "manual".into()),
             added_at: now_ms(),
-            overwrite: overwrite_of.is_some(),
             ..Default::default()
         };
         let mut st = self.lock();
@@ -340,10 +332,9 @@ impl Manager {
         if let Some(o) = &overwrite_of {
             // "Add the duplicate and overwrite the existing file"
             if let Some(d) = &o.dest {
-                for f in [d.clone(), format!("{d}.part"), format!("{d}.part.json")] {
-                    let _ = std::fs::remove_file(f);
-                }
+                let _ = std::fs::remove_file(d);
             }
+            actions::discard_part(o);
             if is_busy(&o.status) {
                 if let Some(c) = st.controllers.get(&o.id) {
                     c.stop(crate::downloader::Stop::Cancelled);
@@ -487,6 +478,15 @@ impl Manager {
         }
         self.pump();
         Ok(updated)
+    }
+}
+
+/// Downloads are http and https only.
+fn parse_http_url(s: &str) -> Result<Url, String> {
+    let u = Url::parse(s.trim()).map_err(|_| "invalid address".to_string())?;
+    match u.scheme() {
+        "http" | "https" => Ok(u),
+        _ => Err("only http and https addresses are supported".into()),
     }
 }
 
